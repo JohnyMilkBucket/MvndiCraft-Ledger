@@ -1,7 +1,7 @@
 {
   "name": "mvndicraft-trade-ledger",
   "version": "1.0.0",
-  "description": "MvndiCraft Trade Ledger — Official server trading tool",
+  "description": "MvndiCraft Trade Ledger \u2014 Official server trading tool",
   "main": "main.js",
   "author": "JohnyMilkBucket",
   "license": "MIT",
@@ -26,7 +26,12 @@
     ],
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "assets/icon.ico"
     },
@@ -49,10 +54,9 @@
       "icon": "assets/icon.png"
     }
   },
-  "dependencies": {
-    "electron": "^28.3.3"
-  },
+  "dependencies": {},
   "devDependencies": {
-    "electron-builder": "^24.13.3"
+    "electron-builder": "^24.13.3",
+    "electron": "^28.3.3"
   }
 }
