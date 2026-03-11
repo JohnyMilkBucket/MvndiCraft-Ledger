@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Mvndicraft Trade Ledger</title>
 <link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=IM+Fell+English:ital@0;1&family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -261,6 +262,29 @@ tr:hover td{background:rgba(212,160,23,.03);color:var(--ink);}
 .cc{background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:18px;}
 .ct{font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:14px;}
 
+/* ─── MOBILE RESPONSIVE ─── */
+@media(max-width:600px){
+  .hdr{padding:10px 12px;flex-wrap:wrap;gap:8px;}
+  .hdr-left h1{font-size:18px;}
+  .hdr-right{gap:6px;flex-wrap:wrap;}
+  .btn-header{font-size:8px;padding:5px 8px;letter-spacing:1px;}
+  .join-code-badge{display:none!important;}
+  .tab-bar{gap:2px;padding:0 4px;}
+  .tb{font-size:8px;padding:10px 6px;letter-spacing:1px;}
+  .panel{padding:10px 8px 60px;}
+  .tw{overflow-x:auto;}
+  table{font-size:10px;}
+  .card{padding:12px 10px;}
+  .fg{grid-template-columns:1fr;}
+  .user-name{display:none;}
+  .hdeck,.hrule{display:none;}
+  .role-badge{font-size:8px;padding:2px 6px;}
+}
+@media(max-width:400px){
+  .tb{font-size:7px;padding:8px 4px;}
+  .btn-header{display:none;}
+  #my-orgs-btn,#join-another-btn{display:flex!important;}
+}
 /* ─── NATIONS DOSSIER ─── */
 .nc{background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:16px 20px;margin-bottom:10px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;justify-content:space-between;transition:border-color .2s;}
 .nc:hover{border-color:var(--border-bright);}
@@ -436,7 +460,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none!important;
   <div class="hdr-right">
     <!-- Join Code (hidden for moderators with no org) -->
     <div class="join-code-badge" id="join-code-badge" title="Share this code to invite members" onclick="copyJoinCode()">
-      <span class="jcl">Join Code</span>
+      <span class="jcl" id="join-code-org-name">Join Code</span>
       <span class="jcv" id="join-code-value">——————</span>
     </div>
     <!-- User chip -->
@@ -899,6 +923,7 @@ async function bootApp(){
   // Join code
   if(currentOrg){
     document.getElementById('join-code-value').textContent = currentOrg.joinCode || '——————';
+    document.getElementById('join-code-org-name').textContent = (currentOrg.type === 'nation' ? '🏰 ' : '⚙ ') + (currentOrg.name || 'Join Code');
     document.getElementById('join-code-badge').style.display = 'flex';
   } else {
     document.getElementById('join-code-badge').style.display = 'none';
@@ -919,6 +944,24 @@ async function bootApp(){
 
   // Load global graph
   loadGlobalGraph();
+
+  // Subscribe to join notifications for leaders and mods
+  if((currentUserDoc.role === 'leader' || currentUserDoc._isMod) && currentOrg){
+    db.collection('orgs').doc(currentOrg.id).collection('notifications')
+      .where('read','==',false)
+      .onSnapshot(function(snap){
+        snap.docChanges().forEach(function(change){
+          if(change.type === 'added'){
+            var data = change.doc.data();
+            if(data.type === 'join'){
+              showNotificationBanner('👋 ' + esc(data.userName) + ' has joined your ' + (currentOrg.type||'org') + '!');
+              // Mark as read
+              change.doc.ref.update({ read: true });
+            }
+          }
+        });
+      });
+  }
 
   // If moderator, load admin console data
   if(isMod){
@@ -1101,6 +1144,15 @@ async function joinOrg(type){
     currentUserDoc.role = 'viewer';
     currentUserDoc.orgMemberships = memberships;
     currentOrg = org;
+    // Notify the org leader that someone new joined
+    await db.collection('orgs').doc(org.id).collection('notifications').add({
+      type: 'join',
+      message: (currentUser.displayName || currentUser.email) + ' has joined ' + org.name + '.',
+      userEmail: currentUser.email,
+      userName: currentUser.displayName || currentUser.email,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      read: false,
+    });
     toast('Joined ' + org.name + '!');
     await bootApp();
   } catch(e){ toast('Error: ' + e.message, true); }
@@ -1118,6 +1170,10 @@ function copyJoinCode(){
 // FIRESTORE — TRADES SUBSCRIPTION
 // ══════════════════════════════════════════
 function subscribeToTrades(orgId){
+  // Clear existing trades when switching orgs
+  trades = [];
+  tradingNations = [];
+  renderLedger();
   if(tradesUnsub) tradesUnsub();
   tradesUnsub = db.collection('orgs').doc(orgId).collection('trades')
     .orderBy('date','desc')
@@ -1209,7 +1265,7 @@ function renderLedger(){
     return;
   }
   body.innerHTML=`<div class="tw"><table>
-    <thead><tr><th>Date</th><th>Nation</th><th>Item</th><th>Type</th><th>Qty</th><th>Price/unit</th><th>Total ⚙</th><th>Notes</th>${canDel?'<th></th>':''}</tr></thead>
+    <thead><tr><th>Date</th><th>Nation</th><th>Item</th><th>Type</th><th>Qty</th><th>Price/unit</th><th>Total ⚙</th><th>Notes</th><th>By</th>${canDel?'<th></th>':''}</tr></thead>
     <tbody>${d.map(t=>`<tr>
       <td class="datec">${esc(t.date)}</td>
       <td><span class="bn">${esc(t.nation||'—')}</span></td>
@@ -1219,6 +1275,7 @@ function renderLedger(){
       <td class="duc">${Number(t.price).toLocaleString()}</td>
       <td class="duc duc-t">${(t.price*t.qty).toLocaleString()}</td>
       <td style="font-size:11px;font-style:italic;color:var(--ink-faint);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.notes||'—')}</td>
+      <td style="font-size:9px;color:var(--ink-faint);letter-spacing:1px;white-space:nowrap;" title="Recorded by">${esc(t.recordedBy||'—')}</td>
       ${canDel?`<td><button class="btn-del" onclick="delTrade('${t.id}')">✕</button></td>`:''}
     </tr>`).join('')}</tbody>
   </table></div>`;
@@ -1416,6 +1473,7 @@ async function saveTrade(){
   const tradeData = {
     nation, item, type: formType, qty, price, date, notes,
     createdBy: currentUser.uid,
+    recordedBy: currentUser.displayName || currentUser.email,
     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     orgId: currentOrg.id,
   };
@@ -1895,6 +1953,15 @@ async function loadModeratorList(){
 // UTILS
 // ══════════════════════════════════════════
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function showNotificationBanner(msg){
+  var el = document.createElement('div');
+  el.style.cssText = 'position:fixed;top:70px;right:20px;z-index:9999;background:rgba(20,14,4,.97);border:1px solid var(--gold-dim);border-radius:4px;padding:14px 18px;font-family:Cinzel,serif;font-size:12px;color:var(--gold-bright);letter-spacing:1px;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,.7);cursor:pointer;';
+  el.textContent = msg;
+  el.onclick = function(){ el.remove(); };
+  document.body.appendChild(el);
+  setTimeout(function(){ if(el.parentNode) el.remove(); }, 6000);
+}
+
 function toast(msg, isErr=false){
   const el=document.createElement('div');
   el.className='toast'+(isErr?' err':'');
