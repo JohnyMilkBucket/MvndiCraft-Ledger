@@ -1,0 +1,1910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Mvndicraft Trade Ledger</title>
+<link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=IM+Fell+English:ital@0;1&family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<!-- Firebase Compat SDK -->
+<!-- Firebase Compat SDK v9 (stable for direct HTML use) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0a05;--paper:#1a1208;
+  --parchment:#c8a96e;--parchment-light:#e2c98a;
+  --ink:#f0d9a0;--ink-dim:#a8885a;--ink-faint:#6b5030;
+  --gold:#d4a017;--gold-bright:#f0c040;--gold-dim:#8a6010;
+  --border:#3a2808;--border-bright:#6a4818;
+  --hover:rgba(212,160,23,0.09);
+}
+html,body{min-height:100vh;background:var(--bg);}
+body{
+  font-family:'IM Fell English',serif;color:var(--ink);
+  background-image:
+    radial-gradient(ellipse at 15% 10%,rgba(80,45,5,.22) 0%,transparent 55%),
+    radial-gradient(ellipse at 85% 90%,rgba(50,25,5,.28) 0%,transparent 55%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%230d0a05'/%3E%3Crect x='0' y='0' width='1' height='1' fill='%231a1005' opacity='.5'/%3E%3C/svg%3E");
+}
+
+/* ─── AUTH OVERLAY ─── */
+.auth-overlay{
+  position:fixed;inset:0;z-index:9000;
+  background:radial-gradient(ellipse at 50% 30%,#1a1005 0%,#060402 100%);
+  display:flex;align-items:center;justify-content:center;
+}
+.auth-box{
+  text-align:center;padding:52px 48px;
+  background:rgba(20,14,4,.7);
+  border:1px solid var(--border-bright);border-radius:4px;
+  box-shadow:0 24px 80px rgba(0,0,0,.8),0 0 0 1px rgba(100,72,24,.2);
+  max-width:420px;width:90%;
+}
+.auth-seal{
+  width:72px;height:72px;margin:0 auto 22px;
+  background:radial-gradient(circle at 38% 35%,#d44040,#6e0a0a);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;
+  box-shadow:0 4px 20px rgba(0,0,0,.7),0 0 0 1px rgba(180,40,40,.25);
+}
+.auth-title{
+  font-family:'UnifrakturMaguntia',cursive;font-size:44px;
+  color:var(--gold-bright);text-shadow:0 0 30px rgba(212,160,23,.4),0 2px 4px #000;
+}
+.auth-sub{
+  font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:3px;
+  color:var(--parchment);margin:4px 0 8px;
+}
+.auth-rule{font-size:13px;color:var(--gold);opacity:.4;letter-spacing:8px;margin:8px 0 24px;}
+.auth-desc{
+  font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--ink-faint);margin-bottom:24px;line-height:1.6;
+}
+.btn-google{
+  display:inline-flex;align-items:center;gap:12px;
+  font-family:'Cinzel',serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  background:linear-gradient(180deg,#9a7408,#705206);
+  color:#eedca0;padding:13px 28px;cursor:pointer;border:1px solid var(--border-bright);
+  border-radius:2px;box-shadow:0 2px 12px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,210,80,.1);
+  transition:all .2s;
+}
+.btn-google:hover{background:linear-gradient(180deg,#ba8c0c,#8a6408);transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,0,0,.5),0 0 18px rgba(160,110,0,.12);}
+.btn-google img{width:18px;height:18px;border-radius:50%;background:#fff;padding:2px;}
+.auth-footer{margin-top:20px;font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;color:var(--ink-faint);}
+
+/* ─── ORG SETUP OVERLAY ─── */
+.org-overlay{
+  position:fixed;inset:0;z-index:8900;
+  background:rgba(6,4,2,.92);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+}
+.org-box{
+  background:var(--paper);border:1px solid var(--border-bright);border-radius:4px;
+  padding:36px 32px;max-width:600px;width:100%;
+  box-shadow:0 20px 70px rgba(0,0,0,.8);
+}
+.org-title{
+  font-family:'Cinzel Decorative',serif;font-size:14px;color:var(--gold);
+  letter-spacing:2px;margin-bottom:6px;
+}
+.org-sub{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--ink-faint);text-transform:uppercase;margin-bottom:24px;}
+.org-tabs{display:flex;gap:0;margin-bottom:24px;border:1px solid var(--border);}
+.org-tab{
+  flex:1;padding:10px;text-align:center;cursor:pointer;
+  font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--ink-faint);background:transparent;border:none;transition:all .2s;
+}
+.org-tab.on{background:rgba(212,160,23,.08);color:var(--gold-bright);}
+.org-card{display:none;}
+.org-card.on{display:block;}
+.org-type-row{display:flex;gap:10px;margin-bottom:14px;}
+.org-type-btn{
+  flex:1;padding:12px;cursor:pointer;
+  font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  background:rgba(14,10,4,.8);border:1px solid var(--border);border-radius:2px;
+  color:var(--ink-faint);transition:all .2s;
+}
+.org-type-btn.on{border-color:var(--gold-dim);color:var(--gold-bright);background:rgba(212,160,23,.06);}
+.org-code-display{
+  font-family:'Cinzel Decorative',serif;font-size:28px;letter-spacing:8px;
+  color:var(--gold-bright);text-align:center;padding:16px;
+  background:rgba(14,10,4,.8);border:1px solid var(--border-bright);
+  border-radius:2px;margin:14px 0;text-shadow:0 0 14px rgba(212,160,23,.3);
+}
+
+/* ─── HEADER ─── */
+.hdr{
+  background:linear-gradient(180deg,#060402 0%,#100c05 40%,#0d0a05 100%);
+  border-bottom:1px solid var(--border);padding:18px 24px 13px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+  position:relative;
+  box-shadow:0 4px 30px rgba(0,0,0,.5);
+}
+.hdr::after{
+  content:'';position:absolute;bottom:0;left:8%;right:8%;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold-dim),var(--gold),var(--gold-dim),transparent);
+}
+.hdr-left{display:flex;align-items:center;gap:14px;}
+.seal{
+  width:48px;height:48px;flex-shrink:0;
+  background:radial-gradient(circle at 38% 35%,#d44040,#6e0a0a);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;
+  box-shadow:0 3px 12px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,180,180,.18),0 0 0 1px rgba(180,40,40,.25);
+}
+h1{font-family:'UnifrakturMaguntia',cursive;font-size:clamp(24px,5vw,46px);color:var(--gold-bright);text-shadow:0 0 40px rgba(212,160,23,.5),0 2px 5px #000;letter-spacing:2px;}
+.hdeck{font-family:'Cinzel Decorative',serif;font-size:11px;color:var(--parchment);letter-spacing:3px;margin-top:1px;}
+.hrule{display:block;font-size:12px;color:var(--gold);opacity:.4;letter-spacing:8px;margin:3px 0 1px;}
+.hdr-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.join-code-badge{
+  display:flex;flex-direction:column;align-items:center;
+  background:rgba(14,10,4,.8);border:1px solid var(--border-bright);
+  border-radius:2px;padding:5px 12px;cursor:pointer;transition:border-color .2s;
+}
+.join-code-badge:hover{border-color:var(--gold-dim);}
+.jcl{font-family:'Cinzel',serif;font-size:7px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);}
+.jcv{font-family:'Cinzel Decorative',serif;font-size:13px;color:var(--gold-bright);letter-spacing:3px;}
+.user-chip{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(14,10,4,.8);border:1px solid var(--border);
+  border-radius:2px;padding:5px 10px;
+}
+.user-avatar{width:26px;height:26px;border-radius:50%;border:1px solid var(--border-bright);}
+.user-name{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:var(--parchment);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.role-badge{
+  font-family:'Cinzel',serif;font-size:7px;letter-spacing:1px;text-transform:uppercase;
+  padding:1px 5px;border-radius:1px;
+}
+.role-viewer{background:rgba(50,50,80,.3);border:1px solid rgba(80,80,120,.4);color:#9090cc;}
+.role-merchant{background:rgba(50,80,50,.3);border:1px solid rgba(80,120,80,.4);color:#80bb80;}
+.role-leader{background:rgba(100,70,10,.3);border:1px solid rgba(160,110,20,.4);color:var(--gold-bright);}
+.role-moderator{background:rgba(80,10,10,.4);border:1px solid rgba(140,20,20,.5);color:#cc6060;}
+.btn-header{
+  font-family:'Cinzel',serif;font-size:8px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  background:rgba(14,10,4,.8);border:1px solid var(--border);border-radius:2px;
+  color:var(--ink-faint);padding:6px 12px;cursor:pointer;transition:all .2s;
+}
+.btn-header:hover{border-color:var(--border-bright);color:var(--parchment);}
+.btn-signout{color:#884040;}
+.btn-signout:hover{border-color:rgba(120,40,40,.5);color:#cc6060;}
+
+/* ─── TABS ─── */
+.tabs{display:flex;flex-wrap:wrap;justify-content:center;background:#070503;border-bottom:1px solid var(--border);}
+.tb{font-family:'Cinzel',serif;font-size:10px;font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--ink-faint);background:none;border:none;border-bottom:2px solid transparent;padding:13px 18px 11px;cursor:pointer;transition:color .2s,border-color .2s;white-space:nowrap;}
+.tb:hover{color:var(--parchment);}
+.tb.on{color:var(--gold-bright);border-bottom-color:var(--gold);text-shadow:0 0 14px rgba(212,160,23,.3);}
+
+/* ─── PANEL ─── */
+.panel{max-width:1120px;margin:0 auto;padding:22px 16px 80px;}
+.hidden{display:none!important;}
+
+/* ─── SECTION TITLE ─── */
+.stitle{font-family:'Cinzel Decorative',serif;font-size:12px;color:var(--gold);letter-spacing:2px;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.stitle::before,.stitle::after{content:'◆';font-size:7px;opacity:.4;}
+
+/* ─── CARD ─── */
+.card{background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:20px;margin-bottom:16px;box-shadow:0 6px 24px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.02);}
+
+/* ─── FORM ─── */
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:12px;}
+.fgrp{display:flex;flex-direction:column;gap:5px;position:relative;}
+label{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2.5px;text-transform:uppercase;color:var(--ink-dim);}
+.fi{background:#0e0a04;border:1px solid var(--border);border-radius:2px;color:var(--ink);font-family:'IM Fell English',serif;font-size:14px;padding:9px 12px;outline:none;width:100%;transition:border-color .2s,box-shadow .2s;}
+.fi:focus{border-color:var(--gold-dim);box-shadow:0 0 0 2px rgba(160,100,8,.18);}
+.fi::placeholder{color:var(--ink-faint);opacity:.65;}
+textarea.fi{min-height:68px;resize:vertical;}
+input[type=date].fi{color-scheme:dark;}
+
+/* ─── CUSTOM SELECT ─── */
+.csw{position:relative;}
+.csb{display:flex;align-items:center;justify-content:space-between;background:#0e0a04;border:1px solid var(--border);border-radius:2px;color:var(--ink);font-family:'IM Fell English',serif;font-size:14px;padding:9px 12px;outline:none;width:100%;cursor:pointer;transition:border-color .2s,box-shadow .2s;text-align:left;}
+.csb .arr{font-family:sans-serif;font-size:10px;color:var(--ink-faint);transition:transform .18s;flex-shrink:0;margin-left:6px;}
+.csb.open,.csb:focus{border-color:var(--gold-dim);box-shadow:0 0 0 2px rgba(160,100,8,.18);}
+.csb.open .arr{transform:rotate(180deg);}
+.csb.ph{color:var(--ink-faint);opacity:.75;}
+.csb-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* ─── DROPDOWNS ─── */
+.drop{position:absolute;top:calc(100% + 3px);left:0;right:0;background:#110d05;border:1px solid var(--border-bright);border-radius:2px;z-index:400;max-height:240px;overflow-y:auto;box-shadow:0 14px 40px rgba(0,0,0,.75),0 0 0 1px rgba(100,72,24,.2);animation:dIn .12s ease;}
+@keyframes dIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+.di{padding:8px 14px;cursor:pointer;font-size:13px;font-family:'IM Fell English',serif;color:var(--ink-dim);border-bottom:1px solid rgba(40,28,6,.6);transition:background .1s,color .1s;}
+.di:last-child{border-bottom:none;}
+.di:hover,.di.hi{background:var(--hover);color:var(--parchment-light);}
+.dcat{padding:5px 14px 4px;font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--gold-dim);background:rgba(20,14,4,.9);border-bottom:1px solid var(--border);text-transform:uppercase;position:sticky;top:0;z-index:1;}
+.di-sub{padding-left:20px;}
+
+/* ─── FILTER BAR ─── */
+.fbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end;}
+.fbar .fi{min-width:180px;flex:2;max-width:320px;}
+.fbar .csw{min-width:140px;flex:1;max-width:210px;}
+
+/* ─── TABLE ─── */
+.lmeta{font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;color:var(--ink-faint);margin-bottom:12px;}
+.lmeta b{color:var(--gold-bright);font-weight:normal;}
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:2px;}
+table{width:100%;border-collapse:collapse;min-width:680px;font-size:13px;}
+th{font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--gold-dim);padding:10px 12px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--border-bright);background:rgba(14,10,3,.9);}
+td{padding:9px 12px;border-bottom:1px solid rgba(36,24,6,.7);color:var(--ink-dim);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(212,160,23,.03);color:var(--ink);}
+.bn{display:inline-block;border-radius:2px;padding:2px 8px;font-family:'Cinzel',serif;font-size:9px;letter-spacing:.5px;background:rgba(140,28,28,.15);border:1px solid rgba(140,28,28,.3);color:#dd7070;}
+.bi{display:inline-block;border-radius:2px;padding:2px 8px;background:rgba(212,160,23,.07);border:1px solid rgba(212,160,23,.2);color:var(--parchment);font-family:'IM Fell English',serif;font-size:12px;}
+.bts{display:inline-block;border-radius:2px;padding:2px 8px;font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;background:rgba(80,30,30,.25);border:1px solid rgba(120,45,45,.3);color:#bb8080;}
+.btb{display:inline-block;border-radius:2px;padding:2px 8px;font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;background:rgba(30,70,30,.25);border:1px solid rgba(45,100,45,.3);color:#80bb80;}
+.duc{font-family:'Cinzel',serif;font-size:12px;color:var(--gold-bright);}
+.duc-t{font-size:13px;}
+.datec{font-family:'Cinzel',serif;font-size:10px;color:var(--ink-faint);white-space:nowrap;}
+
+/* ─── TOTAL PREVIEW ─── */
+.tprev{margin-top:14px;padding:11px 16px;background:rgba(212,160,23,.04);border:1px solid rgba(212,160,23,.14);border-radius:2px;font-family:'Cinzel',serif;font-size:12px;letter-spacing:.5px;}
+.tprev-v{color:var(--gold-bright);font-size:16px;}
+.tprev-d{margin-left:14px;color:var(--ink-faint);}
+
+/* ─── BUTTONS ─── */
+.btn-p{font-family:'Cinzel',serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border:1px solid var(--border-bright);border-radius:2px;background:linear-gradient(180deg,#9a7408,#705206);color:#eedca0;padding:10px 24px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,210,80,.1);transition:all .2s;}
+.btn-p:hover{background:linear-gradient(180deg,#ba8c0c,#8a6408);box-shadow:0 4px 18px rgba(0,0,0,.5),0 0 18px rgba(160,110,0,.12);transform:translateY(-1px);}
+.btn-del{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;background:transparent;color:#884040;border:1px solid rgba(70,18,18,.6);padding:4px 8px;cursor:pointer;border-radius:2px;transition:all .2s;}
+.btn-del:hover{background:rgba(100,22,22,.2);border-color:#7a2020;color:#cc6666;}
+.btn-sm{font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;text-transform:uppercase;background:rgba(14,10,4,.8);border:1px solid var(--border);border-radius:2px;color:var(--ink-faint);padding:5px 10px;cursor:pointer;transition:all .2s;}
+.btn-sm:hover{border-color:var(--border-bright);color:var(--parchment);}
+
+/* ─── STAT GRID ─── */
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:11px;margin-bottom:22px;}
+.sc{background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:14px;text-align:center;}
+.sv{font-family:'Cinzel Decorative',serif;font-size:24px;color:var(--gold-bright);text-shadow:0 0 14px rgba(212,160,23,.22);line-height:1;}
+.sk{font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);margin-top:5px;}
+
+/* ─── CHARTS ─── */
+.cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;}
+.cc{background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:18px;}
+.ct{font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:14px;}
+
+/* ─── NATIONS DOSSIER ─── */
+.nc{background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:16px 20px;margin-bottom:10px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;justify-content:space-between;transition:border-color .2s;}
+.nc:hover{border-color:var(--border-bright);}
+.nseal{width:42px;height:42px;flex-shrink:0;background:radial-gradient(circle at 38% 35%,#c43030,#700a0a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 10px rgba(0,0,0,.55),0 0 0 1px rgba(180,40,40,.2);}
+.nn{font-family:'Cinzel Decorative',serif;font-size:14px;color:var(--parchment-light);}
+.ntags{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;}
+.ntag{font-family:'IM Fell English',serif;font-size:10px;color:var(--ink-faint);background:rgba(50,34,8,.5);padding:1px 7px;border-radius:2px;}
+.nm{display:flex;gap:16px;flex-wrap:wrap;align-items:center;}
+.ms{text-align:center;}
+.mv{font-family:'Cinzel',serif;font-size:13px;color:var(--gold-bright);}
+.mk{font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;color:var(--ink-faint);text-transform:uppercase;}
+
+/* ─── ADMIN CONSOLE ─── */
+.admin-banner{
+  display:flex;align-items:center;gap:14px;
+  background:rgba(80,10,10,.2);border:1px solid rgba(120,20,20,.4);
+  border-radius:2px;padding:12px 18px;margin-bottom:20px;
+}
+.admin-banner .icon{font-size:20px;}
+.admin-banner-text .t{font-family:'Cinzel Decorative',serif;font-size:12px;color:#cc6060;letter-spacing:1px;}
+.admin-banner-text .s{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--ink-faint);text-transform:uppercase;margin-top:2px;}
+.admin-org-card{
+  background:var(--paper);border:1px solid var(--border);border-radius:2px;
+  margin-bottom:12px;overflow:hidden;
+}
+.admin-org-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 18px;cursor:pointer;transition:background .15s;
+}
+.admin-org-header:hover{background:rgba(212,160,23,.04);}
+.admin-org-name{font-family:'Cinzel Decorative',serif;font-size:13px;color:var(--parchment-light);}
+.admin-org-meta{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:var(--ink-faint);}
+.admin-org-body{display:none;border-top:1px solid var(--border);padding:14px 18px;}
+.admin-org-body.open{display:block;}
+
+/* ─── EMPTY / LOADING ─── */
+.empty{text-align:center;padding:56px 20px;color:var(--ink-faint);}
+.empty .icon{font-size:44px;opacity:.22;display:block;margin-bottom:12px;}
+.empty p{font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;}
+.loading{text-align:center;padding:40px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:var(--ink-faint);}
+
+/* ─── TOAST ─── */
+.toast{position:fixed;bottom:24px;right:24px;background:#110d05;border:1px solid var(--border-bright);padding:11px 20px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;color:var(--gold-bright);border-radius:2px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.65);animation:tIn .22s ease;}
+.toast::before{content:'✦ ';opacity:.55;}
+.toast.err{color:#cc6060;border-color:rgba(120,30,30,.6);}
+@keyframes tIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ─── NUMBER SPINNERS ─── */
+input[type=number]{-moz-appearance:textfield!important;appearance:textfield!important;padding-right:26px!important;}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none!important;appearance:none!important;display:none!important;margin:0!important;opacity:0!important;width:0!important;}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:#080503;}
+::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--gold-dim);}
+
+/* ─── READONLY LOCK ─── */
+.readonly-lock{opacity:.4;pointer-events:none;}
+.readonly-notice{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--ink-faint);text-transform:uppercase;text-align:center;padding:20px;border:1px dashed rgba(58,40,8,.5);border-radius:2px;margin-bottom:16px;}
+
+@media(max-width:580px){
+  .hdr{flex-direction:column;align-items:flex-start;}
+  .fg{grid-template-columns:1fr 1fr;}
+  .panel{padding:14px 10px 70px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ AUTH OVERLAY ══════════════ -->
+<div id="auth-overlay" class="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-seal">⚜</div>
+    <div class="auth-title">Mvndicraft</div>
+    <div class="auth-sub">Trade Ledger</div>
+    <span class="auth-rule">✦ ✦ ✦</span>
+    <div class="auth-desc">Official commerce record of the realm.<br>Sign in to access your ledger.</div>
+    <button class="btn-google" onclick="signInWithGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G"/>
+      Sign in with Google
+    </button>
+    <div class="auth-footer">Your data is stored securely and only visible to your Nation or Organization.</div>
+  </div>
+</div>
+
+<!-- ══════════════ ORG SETUP OVERLAY ══════════════ -->
+<div id="org-overlay" class="org-overlay hidden">
+  <div class="org-box">
+    <div class="org-title">Welcome, Merchant</div>
+    <div class="org-sub">Join or establish a Nation or Organization to begin</div>
+
+    <!-- TOP ACTION BUTTONS -->
+    <div class="org-tabs" style="margin-bottom:0;">
+      <button class="org-tab on" id="otab-join-nation" onclick="orgSetupTab('join-nation')">🏰 Join Nation</button>
+      <button class="org-tab" id="otab-join-org" onclick="orgSetupTab('join-org')">⚙ Join Organization</button>
+      <button class="org-tab" id="otab-create" onclick="orgSetupTab('create')">✦ Establish New</button>
+    </div>
+
+    <!-- JOIN NATION -->
+    <div class="org-card on" id="oc-join-nation">
+      <div style="font-family:Cinzel,serif;font-size:9px;letter-spacing:2px;color:var(--gold-dim);text-transform:uppercase;margin-bottom:10px;">Join an existing Nation</div>
+      <div class="fgrp" style="margin-bottom:14px;">
+        <label>Nation Join Code</label>
+        <input class="fi" id="join-code-input" placeholder="Enter 6-character code…" maxlength="6" autocomplete="off"
+          style="letter-spacing:5px;font-size:20px;text-transform:uppercase;text-align:center;"/>
+      </div>
+      <div style="font-family:Cinzel,serif;font-size:9px;letter-spacing:2px;color:var(--ink-faint);text-transform:uppercase;margin-bottom:16px;">
+        Ask your Nation Leader to share the Join Code with you.
+      </div>
+      <button class="btn-p" style="width:100%" onclick="joinOrg('nation')">🏰 &nbsp;Join Nation</button>
+    </div>
+
+    <!-- JOIN ORGANIZATION -->
+    <div class="org-card" id="oc-join-org">
+      <div style="font-family:Cinzel,serif;font-size:9px;letter-spacing:2px;color:var(--gold-dim);text-transform:uppercase;margin-bottom:10px;">Join an existing Organization</div>
+      <div class="fgrp" style="margin-bottom:14px;">
+        <label>Organization Join Code</label>
+        <input class="fi" id="join-code-input-org" placeholder="Enter 6-character code…" maxlength="6" autocomplete="off"
+          style="letter-spacing:5px;font-size:20px;text-transform:uppercase;text-align:center;"/>
+      </div>
+      <div style="font-family:Cinzel,serif;font-size:9px;letter-spacing:2px;color:var(--ink-faint);text-transform:uppercase;margin-bottom:16px;">
+        Ask your Organization Leader to share the Join Code with you.
+      </div>
+      <button class="btn-p" style="width:100%" onclick="joinOrg('organization')">⚙ &nbsp;Join Organization</button>
+    </div>
+
+    <!-- CREATE CARD -->
+    <div class="org-card" id="oc-create">
+      <div class="org-type-row">
+        <button class="org-type-btn on" id="otype-nation" onclick="setOrgType('nation')">🏰 Nation</button>
+        <button class="org-type-btn" id="otype-organization" onclick="setOrgType('organization')">⚙ Organization</button>
+      </div>
+      <div class="fgrp" style="margin-bottom:16px;">
+        <label id="org-name-label">Nation Name</label>
+        <input class="fi" id="org-name-input" placeholder="Enter your nation's name…" autocomplete="off"/>
+      </div>
+      <button class="btn-p" style="width:100%" onclick="createOrg()">⚜ &nbsp;Establish Nation</button>
+    </div>
+
+    <div style="margin-top:14px;font-family:Cinzel,serif;font-size:9px;letter-spacing:2px;color:var(--ink-faint);text-transform:uppercase;text-align:center;">
+      You can belong to multiple Nations and Organizations.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ ORG SWITCHER (returning users with multiple orgs) ══════════════ -->
+<div id="org-switcher" class="org-overlay hidden">
+  <div class="org-box" style="max-width:480px;">
+    <div class="org-title">Your Organizations</div>
+    <div class="org-sub">Select which Nation or Organization to enter, or join/create a new one</div>
+    <div id="switcher-list" style="margin:18px 0;"></div>
+    <div style="border-top:1px solid var(--border);padding-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn-p" style="flex:1;" onclick="showJoinFromSwitcher()">⚔ Join Another</button>
+      <button class="btn-p" style="flex:1;background:rgba(60,40,10,.6);" onclick="showCreateFromSwitcher()">🏰 Establish New</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MAIN APP ══════════════ -->
+<div id="app" class="hidden">
+
+<header class="hdr">
+  <div class="hdr-left">
+    <div class="seal">⚜</div>
+    <div>
+      <h1>Mvndicraft</h1>
+      <div class="hdeck">Trade Ledger</div>
+      <span class="hrule">✦ ✦ ✦</span>
+    </div>
+  </div>
+  <div class="hdr-right">
+    <!-- Join Code (hidden for moderators with no org) -->
+    <div class="join-code-badge" id="join-code-badge" title="Share this code to invite members" onclick="copyJoinCode()">
+      <span class="jcl">Join Code</span>
+      <span class="jcv" id="join-code-value">——————</span>
+    </div>
+    <!-- User chip -->
+    <div class="user-chip" id="user-chip">
+      <img class="user-avatar" id="user-avatar" src="" alt=""/>
+      <div>
+        <div class="user-name" id="user-name-display">—</div>
+        <div class="role-badge" id="role-badge"></div>
+      </div>
+    </div>
+    <!-- Download / Update button -->
+    <button class="btn-header" id="my-orgs-btn" onclick="goToSwitcher()" title="View your Nations &amp; Organizations">🏰 My Nations &amp; Orgs</button>
+    <button class="btn-header" id="dl-btn" onclick="openGitHub()">⬇ Download App</button>
+    <button class="btn-header btn-signout" onclick="doSignOut()">⇥ Sign Out</button>
+  </div>
+</header>
+
+<nav class="tabs" id="main-tabs">
+  <button class="tb on"  onclick="switchTab('ledger')">📜 Ledger</button>
+  <button class="tb"     onclick="switchTab('new')" id="tab-btn-new">✍ New Trade</button>
+  <button class="tb"     onclick="switchTab('stats')">📊 Statistics</button>
+  <button class="tb"     onclick="switchTab('nations')">🏰 Nations</button>
+  <button class="tb hidden" onclick="switchTab('members')" id="tab-btn-members">👥 Members</button>
+  <button class="tb hidden" onclick="switchTab('admin')" id="tab-btn-admin">🔐 Admin Console</button>
+</nav>
+
+<main class="panel">
+
+  <!-- ─── LEDGER ─── -->
+  <section id="tab-ledger">
+    <div class="fbar">
+      <input class="fi" id="l-search" placeholder="🔍  Search items, nations, notes…" oninput="renderLedger()"/>
+      <div class="csw" id="csw-fn">
+        <button class="csb ph" id="csb-fn" onclick="toggleDrop('drop-fn','csb-fn')">
+          <span class="csb-label">All Nations</span><span class="arr">▾</span>
+        </button>
+        <div class="drop hidden" id="drop-fn"></div>
+      </div>
+      <div class="csw">
+        <button class="csb" id="csb-ft" onclick="toggleDrop('drop-ft','csb-ft')">
+          <span class="csb-label" id="csb-ft-lbl">Buy &amp; Sell</span><span class="arr">▾</span>
+        </button>
+        <div class="drop hidden" id="drop-ft">
+          <div class="di hi" onclick="pickFilter('type','','Buy &amp; Sell','csb-ft-lbl','drop-ft','csb-ft')">All Types</div>
+          <div class="di"    onclick="pickFilter('type','sell','Selling','csb-ft-lbl','drop-ft','csb-ft')">Selling</div>
+          <div class="di"    onclick="pickFilter('type','buy','Buying','csb-ft-lbl','drop-ft','csb-ft')">Buying</div>
+        </div>
+      </div>
+      <div class="csw">
+        <button class="csb" id="csb-fs" onclick="toggleDrop('drop-fs','csb-fs')">
+          <span class="csb-label" id="csb-fs-lbl">Sort: Newest</span><span class="arr">▾</span>
+        </button>
+        <div class="drop hidden" id="drop-fs">
+          <div class="di hi" onclick="pickFilter('sort','date','Sort: Newest','csb-fs-lbl','drop-fs','csb-fs')">Newest First</div>
+          <div class="di"    onclick="pickFilter('sort','value','Sort: Value','csb-fs-lbl','drop-fs','csb-fs')">Highest Value</div>
+          <div class="di"    onclick="pickFilter('sort','nation','Sort: Nation','csb-fs-lbl','drop-fs','csb-fs')">Nation A–Z</div>
+        </div>
+      </div>
+    </div>
+    <div class="lmeta" id="lmeta"></div>
+    <div id="ledger-body"><div class="loading">Loading records…</div></div>
+  </section>
+
+  <!-- ─── NEW TRADE ─── -->
+  <section id="tab-new" class="hidden">
+    <div id="trade-readonly-notice" class="readonly-notice hidden">
+      ⚔ Viewers may observe the ledger but cannot record new trades. Contact your Nation Leader to request Merchant rank.
+    </div>
+    <div id="trade-form-wrap">
+      <div class="stitle">Record New Trade</div>
+      <div class="card">
+        <div class="fg">
+          <div class="fgrp">
+            <label>Nation / Trading Partner</label>
+            <input class="fi" id="f-nation" placeholder="Type or select a nation…" autocomplete="off"
+              oninput="showNationDrop()" onfocus="showNationDrop()"/>
+            <div class="drop hidden" id="drop-nation"></div>
+          </div>
+          <div class="fgrp">
+            <label>Item / Resource</label>
+            <input class="fi" id="f-item" placeholder="Search all items…" autocomplete="off"
+              oninput="showItemDrop();const _v=this.value.trim();checkLivestock(_v);checkSmith(_v);checkBrew(_v);" onfocus="showItemDrop()"/>
+            <div class="drop hidden" id="drop-item"></div>
+          </div>
+          <div class="fgrp">
+            <label>Trade Type</label>
+            <div class="csw">
+              <button class="csb" id="csb-type" onclick="toggleDrop('drop-type','csb-type')">
+                <span class="csb-label" id="csb-type-lbl">Selling</span><span class="arr">▾</span>
+              </button>
+              <div class="drop hidden" id="drop-type">
+                <div class="di hi" id="opt-sell" onclick="setFormType('sell')">Selling ↓</div>
+                <div class="di"    id="opt-buy"  onclick="setFormType('buy')">Buying ↑</div>
+              </div>
+            </div>
+          </div>
+          <div class="fgrp">
+            <label>Quantity</label>
+            <div style="display:flex;border:1px solid var(--border);border-radius:3px;overflow:hidden;background:var(--ink);">
+              <input class="fi" type="number" id="f-qty" min="1" placeholder="e.g. 64" oninput="calcPreview()"
+                style="flex:1;border:none;border-radius:0;margin:0;min-width:0;"/>
+              <div style="display:flex;flex-direction:column;width:22px;border-left:1px solid var(--border);flex-shrink:0;">
+                <button type="button" tabindex="-1" onclick="stepNum('f-qty',1)" style="flex:1;background:rgba(40,24,4,.8);border:none;border-bottom:1px solid var(--border);color:var(--gold);cursor:pointer;font-size:10px;line-height:1;padding:0;transition:background .15s;" onmouseover="this.style.background='rgba(212,160,23,.25)'" onmouseout="this.style.background='rgba(40,24,4,.8)'">▲</button>
+                <button type="button" tabindex="-1" onclick="stepNum('f-qty',-1)" style="flex:1;background:rgba(40,24,4,.8);border:none;color:var(--gold);cursor:pointer;font-size:10px;line-height:1;padding:0;transition:background .15s;" onmouseover="this.style.background='rgba(212,160,23,.25)'" onmouseout="this.style.background='rgba(40,24,4,.8)'">▼</button>
+              </div>
+            </div>
+          </div>
+          <div class="fgrp">
+            <label>Price per Unit (⚙ Ducats)</label>
+            <div style="display:flex;border:1px solid var(--border);border-radius:3px;overflow:hidden;background:var(--ink);">
+              <input class="fi" type="number" id="f-price" min="0" placeholder="e.g. 25" oninput="calcPreview()"
+                style="flex:1;border:none;border-radius:0;margin:0;min-width:0;"/>
+              <div style="display:flex;flex-direction:column;width:22px;border-left:1px solid var(--border);flex-shrink:0;">
+                <button type="button" tabindex="-1" onclick="stepNum('f-price',1)" style="flex:1;background:rgba(40,24,4,.8);border:none;border-bottom:1px solid var(--border);color:var(--gold);cursor:pointer;font-size:10px;line-height:1;padding:0;transition:background .15s;" onmouseover="this.style.background='rgba(212,160,23,.25)'" onmouseout="this.style.background='rgba(40,24,4,.8)'">▲</button>
+                <button type="button" tabindex="-1" onclick="stepNum('f-price',-1)" style="flex:1;background:rgba(40,24,4,.8);border:none;color:var(--gold);cursor:pointer;font-size:10px;line-height:1;padding:0;transition:background .15s;" onmouseover="this.style.background='rgba(212,160,23,.25)'" onmouseout="this.style.background='rgba(40,24,4,.8)'">▼</button>
+              </div>
+            </div>
+          </div>
+          <div class="fgrp">
+            <label>Date</label>
+            <input class="fi" type="date" id="f-date"/>
+          </div>
+        </div>
+
+        <div id="livestock-panel" class="hidden" style="border:1px solid var(--border-bright);border-radius:3px;padding:14px 16px;margin:8px 0;background:rgba(30,18,4,.45);">
+          <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:12px;">🐴 Livestock Details</div>
+          <div class="fg" id="livestock-fields"></div>
+        </div>
+        <div id="smith-panel" class="hidden" style="border:1px solid var(--border-bright);border-radius:3px;padding:14px 16px;margin:8px 0;background:rgba(4,18,4,.35);">
+          <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:12px;">⚒ Smith Quality</div>
+          <div class="fg" id="smith-fields"></div>
+        </div>
+        <div id="brew-panel" class="hidden" style="border:1px solid var(--border-bright);border-radius:3px;padding:14px 16px;margin:8px 0;background:rgba(4,4,22,.45);">
+          <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:12px;">🍺 Brew Details</div>
+          <div class="fg" id="brew-fields"></div>
+        </div>
+
+        <div class="tprev hidden" id="tprev">
+          Total Value: <span class="tprev-v" id="tprev-v"></span>
+          <span class="tprev-d" id="tprev-d"></span>
+        </div>
+        <div class="fgrp" style="margin-top:13px;">
+          <label>Notes (optional)</label>
+          <textarea class="fi" id="f-notes" placeholder="Trade conditions, delivery terms, diplomatic notes…"></textarea>
+        </div>
+        <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+          <button class="btn-p" onclick="saveTrade()">⚜ &nbsp;Record Trade</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── STATS ─── -->
+  <section id="tab-stats" class="hidden">
+    <!-- Global Market Graph (shown to all logged-in users) -->
+    <div id="global-graph-section">
+      <div class="stitle">🌐 Global Market — All Realms</div>
+      <div id="global-graph-body"><div class="loading">Loading global data…</div></div>
+    </div>
+    <div style="border-top:1px solid var(--border);margin:22px 0 18px;"></div>
+    <!-- Your org's stats -->
+    <div id="stats-body"></div>
+  </section>
+
+  <!-- ─── NATIONS ─── -->
+  <section id="tab-nations" class="hidden">
+    <div class="stitle">Known Nations &amp; Trading Partners</div>
+    <div id="nations-body"></div>
+  </section>
+
+  <!-- ─── ADMIN CONSOLE (moderator only — completely hidden from others) ─── -->
+  <section id="tab-members" class="hidden">
+    <div class="admin-banner">
+      <span class="icon">👥</span>
+      <div class="admin-banner-text">
+        <div class="t">Member Management</div>
+        <div class="s">Manage roles, kick members, and manage the join blacklist</div>
+      </div>
+    </div>
+    <div id="members-body"><div class="loading">Loading members…</div></div>
+    <div style="margin-top:28px;">
+      <div class="stitle">Join Blacklist</div>
+      <div class="card">
+        <div style="font-family:Cinzel,serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:12px;">Banned Emails — these players cannot join with the code</div>
+        <div id="blacklist-body"><div class="loading" style="padding:8px 0;">Loading…</div></div>
+        <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px;">
+          <div class="fg">
+            <div class="fgrp">
+              <label>Email to Ban</label>
+              <input class="fi" id="blacklist-email-input" placeholder="player@gmail.com"/>
+            </div>
+          </div>
+          <div style="margin-top:10px;">
+            <button class="btn-p" onclick="addToBlacklist()">🚫 &nbsp;Add to Blacklist</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-admin" class="hidden">
+    <div class="admin-banner">
+      <span class="icon">🔐</span>
+      <div class="admin-banner-text">
+        <div class="t">Moderator Console</div>
+        <div class="s">Restricted Access · All Ledger Activity Visible Here</div>
+      </div>
+    </div>
+    <div id="admin-body"><div class="loading">Loading all organizations…</div></div>
+    <div style="margin-top:28px;">
+      <div class="stitle">Moderator Management</div>
+      <div class="card">
+        <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:12px;">Current Moderators</div>
+        <div id="mod-list"><div class="loading" style="padding:10px 0;">Loading…</div></div>
+        <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px;">
+          <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:10px;">Appoint New Moderator</div>
+          <div class="fg">
+            <div class="fgrp">
+              <label>Google Account Email</label>
+              <input class="fi" id="mod-email-input" placeholder="user@gmail.com"/>
+            </div>
+          </div>
+          <div style="margin-top:12px;">
+            <button class="btn-p" onclick="appointModerator()">⚜ &nbsp;Grant Moderator Rank</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</div><!-- #app -->
+
+<script defer>
+// ══════════════════════════════════════════
+// FIREBASE CONFIG
+// ══════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyB47XJ8mCD-whpsF9KyTLcadFjqU1-hROc",
+  authDomain: "mvndicraft-ledger.firebaseapp.com",
+  projectId: "mvndicraft-ledger",
+  storageBucket: "mvndicraft-ledger.firebasestorage.app",
+  messagingSenderId: "478391372784",
+  appId: "1:478391372784:web:b4a958fb0479c2e7112b35"
+};
+const GITHUB_RELEASES = "https://github.com/JohnyMilkBucket/MvndiCraft-Ledger/releases";
+const MODERATOR_EMAIL = "OPHacker303@gmail.com";
+
+// ══════════════════════════════════════════
+// INIT FIREBASE
+// ══════════════════════════════════════════
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// ══════════════════════════════════════════
+// ITEM DATABASE
+// ══════════════════════════════════════════
+const ITEMS = {
+  "⚙ Towny Resources": ["Coal","Stone Bricks","Terracotta","Sandstone","Diorite","Andesite","Glass","Raw Iron","Quartz Blocks","Raw Gold","Magnetite","Wheat","Cooked Beef","Raw Copper","Canister Shot","Cannonball","Boulder","Steel Bolt","Gunpowder Pouch"],
+  "🔩 Blacksmith Materials": ["Raw Iron","Iron Ingot","Bloom","Slag","Hot Cast Iron","Hot Steel","Steel Ingot","Cast Iron Ingot","Steel Wire","Hard Clay","Charcoal","Coal","Weapon Blade","Weapon Head","Armor Plate","Bellows","Tongs","Hammer","Anvil","Cauldron","Bloomery","Smithing Table"],
+  "⛏ Ores & Raw Resources": ["Raw Gold","Raw Copper","Magnetite","Coal Ore","Diamond","Emerald","Lapis Lazuli","Redstone Dust","Netherite Scrap","Quartz","Amethyst Shard","Nether Quartz"],
+  "🪨 Stone & Rock Types": ["Stone","Cobblestone","Stone Bricks","Mossy Stone Bricks","Cracked Stone Bricks","Chiseled Stone Bricks","Granite","Polished Granite","Diorite","Polished Diorite","Andesite","Polished Andesite","Calcite","Tuff","Deepslate","Cobbled Deepslate","Polished Deepslate","Deepslate Bricks","Deepslate Tiles","Chiseled Deepslate","Reinforced Deepslate","Basalt","Polished Basalt","Smooth Basalt","Blackstone","Polished Blackstone","Polished Blackstone Bricks","Chiseled Polished Blackstone","Netherrack","Nether Bricks","Red Nether Bricks","Cracked Nether Bricks","Chiseled Nether Bricks","End Stone","End Stone Bricks","Obsidian","Crying Obsidian","Sandstone","Red Sandstone","Smooth Sandstone","Chiseled Sandstone","Cut Sandstone","Smooth Red Sandstone","Chiseled Red Sandstone","Prismarine","Prismarine Bricks","Dark Prismarine","Mud Bricks","Packed Mud"],
+  "🧱 Walls & Fences": ["Cobblestone Wall","Mossy Cobblestone Wall","Stone Brick Wall","Granite Wall","Diorite Wall","Andesite Wall","Sandstone Wall","Red Sandstone Wall","Brick Wall","Prismarine Wall","End Stone Brick Wall","Nether Brick Wall","Red Nether Brick Wall","Blackstone Wall","Polished Blackstone Wall","Polished Blackstone Brick Wall","Deepslate Brick Wall","Deepslate Tile Wall","Cobbled Deepslate Wall","Mud Brick Wall","Oak Fence","Spruce Fence","Birch Fence","Dark Oak Fence","Acacia Fence","Jungle Fence","Mangrove Fence","Nether Brick Fence"],
+  "🏗 Building Blocks": ["Bricks","Quartz Block","Smooth Quartz","Quartz Pillar","Chiseled Quartz Block","Purpur Block","Purpur Pillar","Terracotta","White Terracotta","Orange Terracotta","Red Terracotta","Brown Terracotta","Gray Terracotta","Light Gray Terracotta","Blue Terracotta","Cyan Terracotta","Green Terracotta","Yellow Terracotta","Black Terracotta","Glass","Glass Pane","Tinted Glass","Hard Clay","Hay Bale","Packed Ice","Blue Ice","Snow Block"],
+  "🪵 Wood & Lumber": ["Oak Log","Spruce Log","Birch Log","Jungle Log","Acacia Log","Dark Oak Log","Mangrove Log","Cherry Log","Stripped Oak Log","Stripped Spruce Log","Stripped Dark Oak Log","Stripped Birch Log","Oak Planks","Spruce Planks","Birch Planks","Jungle Planks","Acacia Planks","Dark Oak Planks","Mangrove Planks","Cherry Planks","Oak Slab","Spruce Slab","Birch Slab","Dark Oak Slab","Thatch Stairs (Birch Stairs)","Stick","Charcoal"],
+  "🌾 Farming & Agriculture": ["Wheat","Wheat Seeds","Bread","Flour","Potato","Baked Potato","Carrot","Golden Carrot","Beetroot","Beetroot Seeds","Beetroot Soup","Pumpkin","Pumpkin Pie","Melon","Melon Slice","Sugar Cane","Sugar","Cocoa Beans","Cookie","Cake","Apple","Dried Kelp","Mushroom (Red)","Mushroom (Brown)","Mushroom Stew","Sweet Berries","Suspicious Stew","Chorus Fruit"],
+  "🍖 Animal Products & Food": ["Cooked Beef","Raw Beef","Cooked Pork","Raw Pork Chop","Cooked Chicken","Raw Chicken","Cooked Mutton","Raw Mutton","Raw Rabbit","Cooked Rabbit","Rabbit Stew","Cooked Cod","Raw Cod","Salmon","Cooked Salmon","Egg","Milk Bucket","Honey Bottle","Golden Apple","Leather","Wool","White Wool","Black Wool","Gray Wool","Brown Wool","Bone","Bone Meal","Rabbit Hide","Rabbit's Foot","Horse","Donkey","Mule"],
+  "🍺 Brewery (Drinks)": ["Whiskey","Brandy","Aqua Ardens","Khrenovukha","Amaretto","Aqua Vitae","Braggot","Bochet","Sherry","Port Wine","Honeyed Wine","Wormwood Wine","Tej","Bragawd","Bock Beer","Raisin Wine","Resinated Wine","Red Wine","Date Wine","Sparkling Wine","White Wine","Sugarcane Wine","Herbal Wine","Clairet","Apple Cider","Dark Beer","Klosterbier","Koyt Beer","Red Ale","Melomel","Medovukha","Airag","Wheat Beer","Wheatbeer","Ale","Grodziskie","Budweiser","Mead","Vinegar"],
+  "⚔ Swords & Blades": ["Shortsword","Longsword","Arming Sword","Greatsword","Zweihander","Claymore","Falchion","Flamberge","Estoc","Iron Dagger","Steel Dagger","Hunting Knife","Iron Sword","Steel Sword","Cast Iron Sword"],
+  "🪓 Axes, Maces & Clubs": ["Iron Axe","Steel Axe","Battle Axe","Francisca Axe (Throwing)","Dane Axe","Iron Mace","Steel Mace","War Hammer","Morning Star","Flail","Wooden Club","Great Maul"],
+  "🗡 Polearms & Spears": ["Spear","Winged Spear","Pike","Halberd","Glaive","Voulge","Bardiche","War Scythe","Lance","Quarterstaff"],
+  "🏹 Ranged Weapons & Ammo": ["Short Bow","Longbow","Crossbow","Arquebus","Standard Arrow","Bodkin Arrow","Standard Bolt","Bullet","Gunpowder","Gunpowder Pouch","String","Feather","Flint"],
+  "🛡 Armor & Shields": ["Leather Helmet","Leather Chestplate","Leather Leggings","Leather Boots","Gambeson","Padded Coif","Chainmail Helmet","Chainmail Chestplate","Chainmail Leggings","Chainmail Boots","Iron Helmet","Iron Chestplate","Iron Leggings","Iron Boots","Cast Iron Helmet","Cast Iron Chestplate","Cast Iron Leggings","Cast Iron Boots","Steel Helmet","Steel Chestplate","Steel Leggings","Steel Boots","Lamellar Armor","Plate Armor","Wooden Shield","Iron Shield","Steel Shield","Tower Shield","Shield"],
+  "⛵ Ships & Naval": ["Cog","Dromon","Drakkar","Galley","Rowboat","Ship Hull Planks","Ship Mast","Ship Sail","Ship Cannon","Naval Gunpowder","Iron Chain","Rope","Anchor","Ship Repair Kit"],
+  "💣 Siege Weapons & Ammo": ["Trebuchet","Ballista","Cannon","Greek Fire (Weapon)","Trebuchet Frame","Trebuchet Arm","Trebuchet Counterweight","Trebuchet Component","Ballista Frame","Ballista Bolt","Steel Bolt","Cannon Barrel","Cannonball","Canister Shot","Greek Fire Flask","Fire Bomb","Boulder","Gunpowder","Gunpowder Pouch","TNT"],
+  "🌿 Herbs & Spices": ["Rosemary","Sage","Thyme","Lavender","Wormwood","Hops","Sweet Berries","Nether Wart","Vine","Lily Pad","Cactus"],
+  "🎨 Dyes & Pigments": ["Red Dye","Blue Dye","Yellow Dye","Green Dye","Orange Dye","Purple Dye","Cyan Dye","White Dye","Black Dye","Brown Dye","Gray Dye","Light Gray Dye","Light Blue Dye","Lime Dye","Magenta Dye","Pink Dye","Ink Sac","Glow Ink Sac","Cocoa Beans","Lapis Lazuli","Bone Meal"],
+  "✨ Rare Materials": ["Glowstone Dust","Glowstone Block","Blaze Rod","Blaze Powder","Slimeball","Phantom Membrane","Spider Eye","Fermented Spider Eye","Nether Star","Dragon Breath","End Crystal"],
+  "🔧 Tools & Utilities": ["Iron Pickaxe","Steel Pickaxe","Iron Shovel","Iron Hoe","Flint and Steel","Compass","Map","Clock","Spyglass","Fishing Rod","Shears","Bucket","Water Bucket","Lantern","Soul Lantern","Torch","Book","Paper","Bear Trap","Spiked Barricade","Scaffolding","Saddle","Iron Horse Armor","Gold Horse Armor","Diamond Horse Armor"],
+  "🏴 Banners & Heraldry": ["White Banner","Orange Banner","Magenta Banner","Light Blue Banner","Yellow Banner","Lime Banner","Pink Banner","Gray Banner","Light Gray Banner","Cyan Banner","Purple Banner","Blue Banner","Brown Banner","Green Banner","Red Banner","Black Banner","Banner Pattern","Shield (Custom)"],
+  "💎 Valuables & Blocks": ["Diamond Block","Emerald Block","Gold Block","Iron Block","Lapis Block","Redstone Block","Coal Block","Netherite Block","Copper Block","Raw Iron Block","Raw Gold Block","Raw Copper Block","Amethyst Block"],
+  "🐗 Custom Mob Drops": ["Bear Pelt","Bear Meat","Bear Claw","Boar Tusk","Raw Boar Meat","Cooked Boar Meat","Boar Hide","Wolf Pelt","Wolf Fang","Bandit Coin Pouch","Bandit Sword","Bandit Equipment","Rat Tail","Rat Hide"],
+  "🏚 Farming Machines": ["Mill","Millstone","Windmill","Windmill Sail","Plough","Cart","Barrel","Brewing Stand","Composter","Beehive","Bee Nest"],
+};
+
+const CHART_C=['#d4a017','#8b2020','#4a7c59','#1a4a7c','#7c6a1a','#4a1a7c','#7c1a4a','#1a7c4a','#9e7020','#1a5a9e'];
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let currentUser     = null;
+let currentUserDoc  = null;
+let currentOrg      = null;
+let trades          = [];
+let tradingNations  = [];
+let fType='', fNation='', fSort='date', formType='sell';
+let cN=null,cI=null,cT=null,cP=null,cG=null;
+let tradesUnsub     = null;
+let createOrgType   = 'nation';
+
+const IS_ELECTRON = (typeof window.electronAPI !== 'undefined' && window.electronAPI.isElectron);
+
+// ══════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════
+function signInWithGoogle(){
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(e => toast('Sign-in failed: ' + e.message, true));
+  } catch(e) {
+    toast('Firebase not ready yet, please wait a moment and try again.', true);
+  }
+}
+function doSignOut(){
+  if(!confirm('Sign out of the Trade Ledger?')) return;
+  if(tradesUnsub) tradesUnsub();
+  auth.signOut();
+}
+async function goToSwitcher(){
+  if(tradesUnsub){ tradesUnsub(); tradesUnsub = null; }
+  var memberships = currentUserDoc.orgMemberships || [];
+  if(memberships.length > 0){
+    await showOrgSwitcher(memberships);
+  } else {
+    showScreen('org');
+  }
+}
+
+auth.onAuthStateChanged(async user => {
+  if(!user){
+    showScreen('auth');
+    return;
+  }
+  currentUser = user;
+  // Load or create user doc
+  const uRef = db.collection('users').doc(user.uid);
+  let uSnap = await uRef.get();
+  if(!uSnap.exists){
+    const data = {
+      email: user.email,
+      displayName: user.displayName || 'Unknown',
+      photoURL: user.photoURL || '',
+      role: 'viewer',
+      orgId: null,
+      orgType: null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    await uRef.set(data);
+    currentUserDoc = data;
+  } else {
+    currentUserDoc = uSnap.data();
+  }
+
+  // Check /moderators collection — this is what actually controls mod powers
+  // Both the HTML and the app read from the same Firestore collection in real time
+  const modSnap = await db.collection('moderators').doc(user.email).get();
+  currentUserDoc._isMod = modSnap.exists;
+
+  // If moderator has an org but wrong role, force-correct to leader
+  if(currentUserDoc._isMod && currentUserDoc.orgId && currentUserDoc.role !== 'leader'){
+    await uRef.update({ role: 'leader' });
+    currentUserDoc.role = 'leader';
+  }
+
+  updateHeaderUI();
+
+  // Moderator with no org: skip straight into app
+  if(currentUserDoc._isMod && !currentUserDoc.orgId){
+    await bootApp();
+    return;
+  }
+
+  if(!currentUserDoc.orgId){
+    showScreen('org');
+    return;
+  }
+
+  // Load memberships array (multi-org support)
+  var memberships = currentUserDoc.orgMemberships || [];
+
+  // Migrate legacy single-org users into memberships array on first load
+  if(memberships.length === 0 && currentUserDoc.orgId){
+    memberships = [{ orgId: currentUserDoc.orgId, role: currentUserDoc.role || 'viewer' }];
+    await uRef.update({ orgMemberships: memberships });
+    currentUserDoc.orgMemberships = memberships;
+  }
+
+  // No orgs at all — go to setup
+  if(memberships.length === 0){
+    showScreen('org');
+    return;
+  }
+
+  // Multiple orgs — show switcher modal
+  if(memberships.length > 1){
+    await showOrgSwitcher(memberships);
+    return;
+  }
+
+  // Single org — load it and boot
+  var oSnap = await db.collection('orgs').doc(memberships[0].orgId).get();
+  if(!oSnap.exists){
+    await uRef.update({ orgMemberships: [], orgId: null, orgType: null, role: 'viewer' });
+    currentUserDoc.orgMemberships = [];
+    showScreen('org');
+    return;
+  }
+  currentOrg = { id: oSnap.id, ...oSnap.data() };
+  currentUserDoc.orgId = currentOrg.id;
+  currentUserDoc.role = memberships[0].role;
+  await bootApp();
+});
+
+function updateHeaderUI(){
+  if(!currentUser || !currentUserDoc) return;
+  document.getElementById('user-avatar').src = currentUser.photoURL || '';
+  document.getElementById('user-name-display').textContent = currentUser.displayName || currentUser.email;
+  const rb = document.getElementById('role-badge');
+  const role = currentUserDoc.role;
+  const displayRole = role.charAt(0).toUpperCase() + role.slice(1);
+  if(currentUserDoc._isMod){
+    // Moderator who also has an org role: show "Leader ♛" in gold crown style
+    // Moderator with no org: show "Moderator ♛"
+    rb.textContent = (role && role !== 'viewer') ? displayRole + ' ♛' : 'Moderator ♛';
+    rb.className = 'role-badge role-moderator';
+  } else {
+    // Regular users: show their org role as-is, no crown
+    rb.textContent = displayRole;
+    rb.className = 'role-badge role-' + role;
+  }
+  // Update download/update button
+  document.getElementById('dl-btn').textContent = IS_ELECTRON ? '🔄 Update App' : '⬇ Download App';
+}
+
+async function bootApp(){
+  showScreen('app');
+
+  // Seed the /moderators collection with the owner email if not already there
+  // This ensures the first-time setup works even before the admin console is used
+  if(currentUser.email === MODERATOR_EMAIL){
+    const seedSnap = await db.collection('moderators').doc(MODERATOR_EMAIL).get();
+    if(!seedSnap.exists){
+      await db.collection('moderators').doc(MODERATOR_EMAIL).set({
+        email: MODERATOR_EMAIL,
+        grantedBy: 'system',
+        grantedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+  }
+
+  // Show/hide tabs based on role
+  const role = currentUserDoc.role;
+  const isMod = currentUserDoc._isMod === true;
+  const canTrade = ['merchant','leader','moderator'].includes(role);
+  document.getElementById('tab-btn-new').classList.toggle('hidden', role === 'viewer');
+  document.getElementById('tab-btn-members').classList.toggle('hidden', !(['leader'].includes(role) || isMod));
+  document.getElementById('tab-btn-admin').classList.toggle('hidden', !isMod);
+
+  // Join code
+  if(currentOrg){
+    document.getElementById('join-code-value').textContent = currentOrg.joinCode || '——————';
+    document.getElementById('join-code-badge').style.display = 'flex';
+  } else {
+    document.getElementById('join-code-badge').style.display = 'none';
+  }
+
+  // New Trade tab lock for viewers
+  const notice = document.getElementById('trade-readonly-notice');
+  const formWrap = document.getElementById('trade-form-wrap');
+  if(role === 'viewer'){
+    notice.classList.remove('hidden');
+    formWrap.classList.add('readonly-lock');
+  }
+
+  // Subscribe to trades
+  if(currentOrg){
+    subscribeToTrades(currentOrg.id);
+  }
+
+  // Load global graph
+  loadGlobalGraph();
+
+  // If moderator, load admin console data
+  if(isMod){
+    loadAdminConsole();
+    switchTab('ledger');
+  } else {
+    switchTab('ledger');
+  }
+
+  initForm();
+}
+
+// ══════════════════════════════════════════
+// SCREEN SWITCHER
+// ══════════════════════════════════════════
+function showScreen(which){
+  document.getElementById('auth-overlay').style.display = which === 'auth' ? 'flex' : 'none';
+  document.getElementById('org-overlay').classList.toggle('hidden', which !== 'org');
+  document.getElementById('org-switcher').classList.toggle('hidden', which !== 'switcher');
+  document.getElementById('app').classList.toggle('hidden', which !== 'app');
+}
+function showOrgSetup(){
+  showScreen('org');
+  orgSetupTab('join-nation');
+}
+function showCreateFromSwitcher(){
+  showScreen('org');
+  orgSetupTab('create');
+}
+// Called from switcher's "Join Another" button
+function showJoinFromSwitcher(){
+  showScreen('org');
+  orgSetupTab('join-nation');
+}
+
+// ══════════════════════════════════════════
+// ORG SETUP
+// ══════════════════════════════════════════
+function orgSetupTab(which){
+  var tabs = ['join-nation','join-org','create'];
+  tabs.forEach(function(t){
+    var btn = document.getElementById('otab-'+t);
+    var card = document.getElementById('oc-'+t);
+    if(btn) btn.classList.toggle('on', t === which);
+    if(card) card.classList.toggle('on', t === which);
+  });
+}
+function setOrgType(t){
+  createOrgType = t;
+  document.getElementById('otype-nation').classList.toggle('on', t==='nation');
+  document.getElementById('otype-organization').classList.toggle('on', t==='organization');
+  document.getElementById('org-name-label').textContent = t==='nation' ? 'Nation Name' : 'Organization Name';
+  document.querySelector('#oc-create .btn-p').textContent = '⚜   Establish ' + (t==='nation'?'Nation':'Organization');
+}
+async function showOrgSwitcher(memberships){
+  showScreen('switcher');
+  var list = document.getElementById('switcher-list');
+  list.innerHTML = '<div class="loading">Loading your organizations…</div>';
+  try {
+    var rows = '';
+    for(var i=0; i<memberships.length; i++){
+      var m = memberships[i];
+      var snap = await db.collection('orgs').doc(m.orgId).get();
+      if(!snap.exists) continue;
+      var org = snap.data();
+      var typeIcon = org.type === 'nation' ? '🏰' : '⚙';
+      var roleLabel = (m.role||'viewer').charAt(0).toUpperCase()+(m.role||'viewer').slice(1);
+      rows += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(30,18,4,.5);border:1px solid var(--border);border-radius:4px;margin-bottom:8px;">'
+            + '<div>'
+            +   '<div style="font-family:Cinzel,serif;font-size:13px;color:var(--gold-bright);">'+typeIcon+' '+esc(org.name)+'</div>'
+            +   '<div style="font-size:9px;color:var(--ink-faint);letter-spacing:1px;text-transform:uppercase;margin-top:3px;">'+org.type+' · '+roleLabel+'</div>'
+            + '</div>'
+            + '<div style="display:flex;gap:8px;align-items:center;">'
+            +   '<button class="btn-p" style="padding:6px 14px;font-size:10px;" onclick="selectOrg(this.dataset.oid)" data-oid="'+m.orgId+'">Enter</button>'
+            +   '<button class="btn-del" style="padding:6px 10px;font-size:11px;" onclick="leaveOrgFromSwitcher(this.dataset.oid,this.dataset.name)" data-oid="'+m.orgId+'" data-name="'+esc(org.name)+'" title="Leave">✕</button>'
+            + '</div>'
+            + '</div>';
+    }
+    list.innerHTML = rows || '<div style="color:var(--ink-faint);font-size:12px;">No active organizations found.</div>';
+  } catch(e){ list.innerHTML = '<div style="color:#cc6060;font-size:11px;">Error: '+esc(e.message)+'</div>'; }
+}
+
+async function selectOrg(orgId){
+  try {
+    var oSnap = await db.collection('orgs').doc(orgId).get();
+    if(!oSnap.exists){ toast('Organization not found.', true); return; }
+    currentOrg = { id: oSnap.id, ...oSnap.data() };
+    // Find role in memberships
+    var memberships = currentUserDoc.orgMemberships || [];
+    var m = memberships.find(function(x){ return x.orgId === orgId; });
+    var role = m ? m.role : 'viewer';
+    currentUserDoc.orgId = orgId;
+    currentUserDoc.orgType = currentOrg.type;
+    currentUserDoc.role = role;
+    await db.collection('users').doc(currentUser.uid).update({ orgId: orgId, orgType: currentOrg.type, role: role });
+    await bootApp();
+  } catch(e){ toast('Error: '+e.message, true); }
+}
+
+async function leaveOrgFromSwitcher(orgId, orgName){
+  if(!confirm('Leave '+orgName+'? You will need the join code to rejoin.')) return;
+  try {
+    var memberships = (currentUserDoc.orgMemberships||[]).filter(function(m){ return m.orgId !== orgId; });
+    await db.collection('users').doc(currentUser.uid).update({ orgMemberships: memberships });
+    await db.collection('orgs').doc(orgId).update({ memberCount: firebase.firestore.FieldValue.increment(-1) });
+    currentUserDoc.orgMemberships = memberships;
+    toast('Left '+orgName+'.');
+    if(memberships.length === 0){
+      currentUserDoc.orgId = null; currentUserDoc.role = 'viewer';
+      await db.collection('users').doc(currentUser.uid).update({ orgId: null, role: 'viewer' });
+      showScreen('org');
+    } else if(memberships.length === 1){
+      await selectOrg(memberships[0].orgId);
+    } else {
+      await showOrgSwitcher(memberships);
+    }
+  } catch(e){ toast('Error: '+e.message, true); }
+}
+
+async function createOrg(){
+  const name = document.getElementById('org-name-input').value.trim();
+  if(!name){ toast('Please enter a name.', true); return; }
+  const joinCode = generateJoinCode();
+  try {
+    const orgRef = await db.collection('orgs').add({
+      name,
+      type: createOrgType,
+      leaderId: currentUser.uid,
+      joinCode,
+      memberCount: 1,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    var newMembership = { orgId: orgRef.id, role: 'leader' };
+    var memberships = (currentUserDoc.orgMemberships||[]).filter(function(m){ return m.orgId !== orgRef.id; });
+    memberships.push(newMembership);
+    await db.collection('users').doc(currentUser.uid).update({
+      orgId: orgRef.id,
+      orgType: createOrgType,
+      role: 'leader',
+      orgMemberships: memberships,
+    });
+    currentUserDoc.orgId = orgRef.id;
+    currentUserDoc.orgType = createOrgType;
+    currentUserDoc.role = 'leader';
+    currentUserDoc.orgMemberships = memberships;
+    currentOrg = { id: orgRef.id, name, type: createOrgType, leaderId: currentUser.uid, joinCode, memberCount: 1 };
+    toast(createOrgType === 'nation' ? 'Nation established!' : 'Organization founded!');
+    await bootApp();
+  } catch(e){ toast('Error: ' + e.message, true); }
+}
+async function joinOrg(type){
+  var inputId = (type === 'organization') ? 'join-code-input-org' : 'join-code-input';
+  const code = document.getElementById(inputId).value.trim().toUpperCase();
+  if(code.length !== 6){ toast('Enter a valid 6-character code.', true); return; }
+  try {
+    const snap = await db.collection('orgs').where('joinCode','==',code).limit(1).get();
+    if(snap.empty){ toast('No Nation or Organization found with that code.', true); return; }
+    const orgDoc = snap.docs[0];
+    const org = { id: orgDoc.id, ...orgDoc.data() };
+
+    // Check blacklist
+    const blSnap = await db.collection('orgs').doc(org.id).collection('blacklist').doc(currentUser.email).get();
+    if(blSnap.exists){ toast('You have been banned from ' + org.name + '.', true); return; }
+
+    // Check if already a member
+    var existing = (currentUserDoc.orgMemberships||[]).find(function(m){ return m.orgId === org.id; });
+    if(existing){ toast('You are already a member of ' + org.name + '.', true); return; }
+
+    var newMembership = { orgId: org.id, role: 'viewer' };
+    var memberships = (currentUserDoc.orgMemberships||[]).concat([newMembership]);
+    await db.collection('users').doc(currentUser.uid).update({
+      orgId: org.id,
+      orgType: org.type,
+      role: 'viewer',
+      orgMemberships: memberships,
+    });
+    await orgDoc.ref.update({ memberCount: firebase.firestore.FieldValue.increment(1) });
+    currentUserDoc.orgId = org.id;
+    currentUserDoc.orgType = org.type;
+    currentUserDoc.role = 'viewer';
+    currentUserDoc.orgMemberships = memberships;
+    currentOrg = org;
+    toast('Joined ' + org.name + '!');
+    await bootApp();
+  } catch(e){ toast('Error: ' + e.message, true); }
+}
+function generateJoinCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:6}, ()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+function copyJoinCode(){
+  if(!currentOrg) return;
+  navigator.clipboard.writeText(currentOrg.joinCode).then(()=>toast('Join code copied!'));
+}
+
+// ══════════════════════════════════════════
+// FIRESTORE — TRADES SUBSCRIPTION
+// ══════════════════════════════════════════
+function subscribeToTrades(orgId){
+  if(tradesUnsub) tradesUnsub();
+  tradesUnsub = db.collection('orgs').doc(orgId).collection('trades')
+    .orderBy('date','desc')
+    .onSnapshot(snap => {
+      trades = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      tradingNations = [...new Set(trades.map(t=>t.nation))].sort();
+      buildNationDrop();
+      renderLedger();
+    }, err => {
+      toast('Error loading trades: ' + err.message, true);
+    });
+}
+
+// ══════════════════════════════════════════
+// DROPDOWN ENGINE
+// ══════════════════════════════════════════
+function toggleDrop(dId,bId){
+  const d=document.getElementById(dId),b=document.getElementById(bId);
+  const wasOpen=!d.classList.contains('hidden');
+  closeDrops();
+  if(!wasOpen){d.classList.remove('hidden');b&&b.classList.add('open');}
+}
+function closeDrops(){
+  document.querySelectorAll('.drop').forEach(d=>d.classList.add('hidden'));
+  document.querySelectorAll('.csb').forEach(b=>b.classList.remove('open'));
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.csw')&&!e.target.closest('.fgrp'))closeDrops();
+});
+function pickFilter(key,val,lbl,lblId,dId,bId){
+  if(key==='type')fType=val;
+  else if(key==='sort')fSort=val;
+  else if(key==='nation')fNation=val;
+  document.getElementById(lblId).innerHTML=lbl;
+  document.querySelectorAll('#'+dId+' .di').forEach(d=>{
+    d.classList.toggle('hi',d.getAttribute&&d.getAttribute('onclick')&&d.getAttribute('onclick').includes("'"+val+"'"));
+  });
+  closeDrops();
+  renderLedger();
+}
+
+// ══════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════
+const TABS=['ledger','new','stats','nations','members','admin'];
+function switchTab(id){
+  closeDrops();
+  TABS.forEach(t=>document.getElementById('tab-'+t).classList.toggle('hidden',t!==id));
+  document.querySelectorAll('.tb').forEach((b,i)=>b.classList.toggle('on',TABS[i]===id));
+  if(id==='ledger')renderLedger();
+  else if(id==='stats'){renderStats();loadGlobalGraph();}
+  else if(id==='nations')renderNations();
+  else if(id==='new')initForm();
+  else if(id==='members')loadMembersPanel();
+  else if(id==='admin')loadAdminConsole();
+}
+
+// ══════════════════════════════════════════
+// NATION FILTER
+// ══════════════════════════════════════════
+function buildNationDrop(){
+  const d=document.getElementById('drop-fn');
+  d.innerHTML=`<div class="di" onclick="pickFilter('nation','','All Nations','csb-fn','drop-fn','csb-fn')">All Nations</div>`+
+    tradingNations.map(n=>`<div class="di" onclick="pickFilter('nation','${esc(n)}','${esc(n)}','csb-fn','drop-fn','csb-fn')">${esc(n)}</div>`).join('');
+}
+
+// ══════════════════════════════════════════
+// LEDGER RENDER
+// ══════════════════════════════════════════
+function renderLedger(){
+  const s=(document.getElementById('l-search')||{value:''}).value.toLowerCase();
+  let d=[...trades];
+  if(s)d=d.filter(t=>t.item.toLowerCase().includes(s)||(t.nation||'').toLowerCase().includes(s)||(t.notes||'').toLowerCase().includes(s));
+  if(fNation)d=d.filter(t=>t.nation===fNation);
+  if(fType)d=d.filter(t=>t.type===fType);
+  if(fSort==='value')d.sort((a,b)=>(b.price*b.qty)-(a.price*a.qty));
+  else if(fSort==='nation')d.sort((a,b)=>(a.nation||'').localeCompare(b.nation||''));
+  else d.sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+  const tot=d.reduce((s,t)=>s+(t.price*t.qty),0);
+  const meta=document.getElementById('lmeta');
+  if(meta)meta.innerHTML=d.length?`${d.length} record${d.length!==1?'s':''}  ·  Total: <b>${tot.toLocaleString()} ⚙ Ducats</b>`:'';
+
+  const body=document.getElementById('ledger-body');
+  if(!body)return;
+  const canDel = currentUserDoc && (currentUserDoc._isMod || ['leader'].includes(currentUserDoc.role));
+  if(!d.length){
+    body.innerHTML=`<div class="empty"><span class="icon">📜</span><p>${trades.length===0?'No trades recorded yet. Begin your ledger.':'No trades match your search.'}</p></div>`;
+    return;
+  }
+  body.innerHTML=`<div class="tw"><table>
+    <thead><tr><th>Date</th><th>Nation</th><th>Item</th><th>Type</th><th>Qty</th><th>Price/unit</th><th>Total ⚙</th><th>Notes</th>${canDel?'<th></th>':''}</tr></thead>
+    <tbody>${d.map(t=>`<tr>
+      <td class="datec">${esc(t.date)}</td>
+      <td><span class="bn">${esc(t.nation||'—')}</span></td>
+      <td><span class="bi">${esc(t.item)}</span></td>
+      <td><span class="${t.type==='sell'?'bts':'btb'}">${t.type==='sell'?'SELL':'BUY'}</span></td>
+      <td style="font-family:'Cinzel',serif;font-size:12px">${Number(t.qty).toLocaleString()}</td>
+      <td class="duc">${Number(t.price).toLocaleString()}</td>
+      <td class="duc duc-t">${(t.price*t.qty).toLocaleString()}</td>
+      <td style="font-size:11px;font-style:italic;color:var(--ink-faint);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.notes||'—')}</td>
+      ${canDel?`<td><button class="btn-del" onclick="delTrade('${t.id}')">✕</button></td>`:''}
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+async function delTrade(id){
+  if(!confirm('Delete this trade record?')) return;
+  if(!currentOrg) return;
+  try {
+    const t = trades.find(x=>x.id===id);
+    await db.collection('orgs').doc(currentOrg.id).collection('trades').doc(id).delete();
+    // Decrement global stats
+    if(t) await updateGlobalStats(t.item, -t.qty, -(t.qty * t.price));
+    toast('Trade removed from ledger.');
+  } catch(e){ toast('Error: '+e.message, true); }
+}
+
+// ══════════════════════════════════════════
+// NEW TRADE FORM
+// ══════════════════════════════════════════
+function initForm(){
+  const d=document.getElementById('f-date');
+  if(d&&!d.value) d.value=new Date().toISOString().slice(0,10);
+}
+function setFormType(t){
+  formType=t;
+  document.getElementById('csb-type-lbl').textContent=t==='sell'?'Selling':'Buying';
+  document.getElementById('opt-sell').classList.toggle('hi',t==='sell');
+  document.getElementById('opt-buy').classList.toggle('hi',t==='buy');
+  closeDrops();calcPreview();
+}
+function showNationDrop(){
+  const v=document.getElementById('f-nation').value.toLowerCase();
+  const d=document.getElementById('drop-nation');
+  const m=tradingNations.filter(n=>n.toLowerCase().includes(v));
+  if(!m.length){d.classList.add('hidden');return;}
+  d.innerHTML=m.map(n=>`<div class="di" onmousedown="pickNation('${esc(n)}')">${esc(n)}</div>`).join('');
+  d.classList.remove('hidden');
+}
+function pickNation(n){document.getElementById('f-nation').value=n;document.getElementById('drop-nation').classList.add('hidden');}
+function showItemDrop(){
+  const v=document.getElementById('f-item').value.toLowerCase().trim();
+  const d=document.getElementById('drop-item');
+  if(!v){d.classList.add('hidden');return;}
+  let html='',cnt=0;
+  for(const[cat,items]of Object.entries(ITEMS)){
+    const m=items.filter(i=>i.toLowerCase().includes(v));
+    if(m.length){html+=`<div class="dcat">${cat}</div>`+m.map(i=>`<div class="di di-sub" onmousedown="pickItem('${esc(i)}')">${esc(i)}</div>`).join('');cnt+=m.length;}
+  }
+  if(!cnt){const raw=document.getElementById('f-item').value;html=`<div class="di" onmousedown="pickItem('${esc(raw)}')">+ Add "${esc(raw)}" as custom item</div>`;}
+  d.innerHTML=html;d.classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════
+// LIVESTOCK PANEL
+// ══════════════════════════════════════════
+const LIVESTOCK_ITEMS = new Set(['Horse','Donkey','Mule']);
+const HORSE_COATS = ['White','Creamy','Chestnut','Brown','Black','Gray','Dark Brown'];
+const HORSE_MARKS = [
+  { id:'None',                label:'None',                 desc:'No markings — solid coat all over' },
+  { id:'Stockings & Blaze',   label:'Stockings & Blaze',    desc:'White lower legs + white stripe running down the face' },
+  { id:'Paint',               label:'Paint',                desc:'Large irregular white patches splashed across the body' },
+  { id:'Snowflake Appaloosa', label:'Snowflake Appaloosa',  desc:'Small white speckles scattered across the hindquarters' },
+  { id:'Sooty',               label:'Sooty',                desc:'Dark smudgy shading along the back and rump, as if dusted with soot' },
+];
+function pickItem(i){
+  document.getElementById('f-item').value=i;
+  document.getElementById('drop-item').classList.add('hidden');
+  checkLivestock(i);checkSmith(i);checkBrew(i);
+}
+function checkLivestock(item){
+  const panel=document.getElementById('livestock-panel');
+  const fields=document.getElementById('livestock-fields');
+  if(!LIVESTOCK_ITEMS.has(item)){panel.classList.add('hidden');fields.innerHTML='';return;}
+  panel.classList.remove('hidden');
+  const isHorse=(item==='Horse'), isDM=(item==='Donkey'||item==='Mule');
+  fields.innerHTML=
+    (isHorse?`<div class="fgrp"><label>Coat Colour</label><div class="csw" style="width:100%"><button class="csb" id="csb-coat" onclick="toggleDrop('drop-coat','csb-coat')" style="width:100%"><span class="csb-label" id="csb-coat-lbl">Select…</span><span class="arr">▾</span></button><div class="drop hidden" id="drop-coat">`+HORSE_COATS.map(c=>`<div class="di" onclick="pickLSField('coat','${c}','csb-coat-lbl','drop-coat','csb-coat')">${c}</div>`).join('')+`</div></div></div>
+    <div class="fgrp"><label>Markings</label><div class="csw" style="width:100%"><button class="csb" id="csb-mark" onclick="toggleDrop('drop-mark','csb-mark')" style="width:100%"><span class="csb-label" id="csb-mark-lbl">Select…</span><span class="arr">▾</span></button><div class="drop hidden" id="drop-mark" style="min-width:300px">`+HORSE_MARKS.map(m=>`<div class="di" onclick="pickLSField('mark','${m.id}','csb-mark-lbl','drop-mark','csb-mark')" style="padding:8px 12px;display:flex;flex-direction:column;gap:3px;border-bottom:1px solid rgba(58,40,8,.4)"><span style="color:var(--gold);font-size:12px">${m.label}</span><span style="color:#9a7d48;font-size:10px;font-style:italic;line-height:1.3">${m.desc}</span></div>`).join('')+`</div></div></div>`:'')
+    +`<div class="fgrp"><label>Speed <span style="opacity:.5;font-size:9px">(blocks/sec)</span></label><input class="fi" type="number" id="ls-speed" min="0" step="0.1" placeholder="e.g. 11.2 — max 14.6"/></div>
+    <div class="fgrp"><label>Jump Height <span style="opacity:.5;font-size:9px">(blocks)</span></label><input class="fi" type="number" id="ls-jump" min="0" step="0.1" placeholder="e.g. 3.4 — max 5.5"/></div>
+    <div class="fgrp"><label>Health <span style="opacity:.5;font-size:9px">(hearts)</span></label><input class="fi" type="number" id="ls-health" min="0" step="0.5" placeholder="e.g. 26 — max 30"/></div>`
+    +(isDM?`<div class="fgrp"><label>Has Chest?</label><div class="csw" style="width:100%"><button class="csb" id="csb-chest" onclick="toggleDrop('drop-chest','csb-chest')" style="width:100%"><span class="csb-label" id="csb-chest-lbl">Select…</span><span class="arr">▾</span></button><div class="drop hidden" id="drop-chest"><div class="di" onclick="pickLSField('chest','Yes','csb-chest-lbl','drop-chest','csb-chest')">Yes</div><div class="di" onclick="pickLSField('chest','No','csb-chest-lbl','drop-chest','csb-chest')">No</div></div></div></div>`:'');
+}
+function pickLSField(key,val,lblId,dropId){
+  document.getElementById(lblId).textContent=val;
+  document.getElementById(dropId).classList.add('hidden');
+}
+function getLivestockNote(){
+  const item=document.getElementById('f-item').value.trim();
+  if(!LIVESTOCK_ITEMS.has(item))return'';
+  const parts=[];
+  const coat=document.getElementById('csb-coat-lbl');
+  const mark=document.getElementById('csb-mark-lbl');
+  const chest=document.getElementById('csb-chest-lbl');
+  const speed=document.getElementById('ls-speed');
+  const jump=document.getElementById('ls-jump');
+  const health=document.getElementById('ls-health');
+  if(coat&&coat.textContent!=='Select…')parts.push('Coat: '+coat.textContent);
+  if(mark&&mark.textContent!=='Select…')parts.push('Marks: '+mark.textContent);
+  if(speed&&speed.value)parts.push('Speed: '+speed.value+' b/s');
+  if(jump&&jump.value)parts.push('Jump: '+jump.value+' blk');
+  if(health&&health.value)parts.push('HP: '+health.value+'❤');
+  if(chest&&chest.textContent!=='Select…')parts.push('Chest: '+chest.textContent);
+  return parts.length?'['+parts.join(' | ')+']':'';
+}
+
+// ══════════════════════════════════════════
+// SMITH PANEL
+// ══════════════════════════════════════════
+const SMITH_QUALITIES=['Terrible','Poor','Fine','Good','Excellent'];
+const SMITH_GRADES=['★☆☆☆  (1 star)','★★☆☆  (2 star)','★★★☆  (3 star)','★★★★  (4 star — max)'];
+const SMITH_ITEMS = new Set(['Shortsword','Longsword','Arming Sword','Greatsword','Zweihander','Claymore','Falchion','Flamberge','Estoc','Iron Dagger','Steel Dagger','Hunting Knife','Iron Sword','Steel Sword','Cast Iron Sword','Iron Axe','Steel Axe','Battle Axe','Francisca Axe (Throwing)','Dane Axe','Iron Mace','Steel Mace','War Hammer','Morning Star','Flail','Great Maul','Spear','Winged Spear','Pike','Halberd','Glaive','Voulge','Bardiche','War Scythe','Lance','Quarterstaff','Short Bow','Longbow','Crossbow','Arquebus','Gambeson','Padded Coif','Chainmail Helmet','Chainmail Chestplate','Chainmail Leggings','Chainmail Boots','Iron Helmet','Iron Chestplate','Iron Leggings','Iron Boots','Cast Iron Helmet','Cast Iron Chestplate','Cast Iron Leggings','Cast Iron Boots','Steel Helmet','Steel Chestplate','Steel Leggings','Steel Boots','Lamellar Armor','Plate Armor','Wooden Shield','Iron Shield','Steel Shield','Tower Shield','Iron Pickaxe','Steel Pickaxe','Iron Shovel','Iron Hoe','Weapon Blade','Weapon Head','Armor Plate']);
+function checkSmith(item){
+  const panel=document.getElementById('smith-panel'),fields=document.getElementById('smith-fields');
+  if(!SMITH_ITEMS.has(item)){panel.classList.add('hidden');fields.innerHTML='';return;}
+  panel.classList.remove('hidden');
+  fields.innerHTML=`<div class="fgrp"><label>Grade</label><div class="csw" style="width:100%"><button class="csb" id="csb-sgrade" onclick="toggleDrop('drop-sgrade','csb-sgrade')" style="width:100%"><span class="csb-label" id="csb-sgrade-lbl">Select…</span><span class="arr">▾</span></button><div class="drop hidden" id="drop-sgrade">${SMITH_GRADES.map(g=>`<div class="di" onclick="pickLSField('sgrade','${g}','csb-sgrade-lbl','drop-sgrade','csb-sgrade')">${g}</div>`).join('')}</div></div></div><div class="fgrp"><label>Quality</label><div class="csw" style="width:100%"><button class="csb" id="csb-squal" onclick="toggleDrop('drop-squal','csb-squal')" style="width:100%"><span class="csb-label" id="csb-squal-lbl">Select…</span><span class="arr">▾</span></button><div class="drop hidden" id="drop-squal">${SMITH_QUALITIES.map(q=>`<div class="di" onclick="pickLSField('squal','${q}','csb-squal-lbl','drop-squal','csb-squal')">${q}</div>`).join('')}</div></div></div><div class="fgrp"><label>Bonus dmg / defence <span style="opacity:.5;font-size:9px">(optional)</span></label><input class="fi" type="number" id="sm-bonus" step="0.1" placeholder="e.g. +3.6 shown in lore"/></div>`;
+}
+function getSmithNote(){
+  const item=document.getElementById('f-item').value.trim();
+  if(!SMITH_ITEMS.has(item))return'';
+  const parts=[];
+  const grade=document.getElementById('csb-sgrade-lbl');
+  const qual=document.getElementById('csb-squal-lbl');
+  const bonus=document.getElementById('sm-bonus');
+  if(grade&&grade.textContent!=='Select…')parts.push(grade.textContent.split(' ')[0]);
+  if(qual&&qual.textContent!=='Select…')parts.push(qual.textContent);
+  if(bonus&&bonus.value)parts.push('Bonus: +'+bonus.value);
+  return parts.length?'['+parts.join(' · ')+']':'';
+}
+
+// ══════════════════════════════════════════
+// BREWERY PANEL
+// ══════════════════════════════════════════
+const BREW_DATA={'Whiskey':{alcohol:18,difficulty:7,distill:2,barrel:'Any',aging:'18 yrs'},'Brandy':{alcohol:17,difficulty:7,distill:2,barrel:'Any',aging:'16 yrs'},'Aqua Ardens':{alcohol:15,difficulty:6,distill:2,barrel:'Any',aging:'6 yrs'},'Khrenovukha':{alcohol:15,difficulty:6,distill:1,barrel:'Any',aging:'8 yrs'},'Amaretto':{alcohol:14,difficulty:6,distill:1,barrel:'Any',aging:'10 yrs'},'Aqua Vitae':{alcohol:14,difficulty:6,distill:2,barrel:'Any',aging:'6 yrs'},'Braggot':{alcohol:10,difficulty:4,distill:0,barrel:'Any',aging:'10 yrs'},'Bochet':{alcohol:10,difficulty:5,distill:0,barrel:'Any',aging:'12 yrs'},'Sherry':{alcohol:10,difficulty:6,distill:0,barrel:'Any',aging:'20 yrs'},'Port Wine':{alcohol:11,difficulty:6,distill:0,barrel:'Any',aging:'24 yrs'},'Honeyed Wine':{alcohol:9,difficulty:5,distill:0,barrel:'Any',aging:'16 yrs'},'Wormwood Wine':{alcohol:9,difficulty:5,distill:0,barrel:'Any',aging:'12 yrs'},'Tej':{alcohol:9,difficulty:4,distill:0,barrel:'Any',aging:'8 yrs'},'Bragawd':{alcohol:9,difficulty:4,distill:0,barrel:'Any',aging:'8 yrs'},'Bock Beer':{alcohol:9,difficulty:4,distill:0,barrel:'Acacia',aging:'12 yrs'},'Raisin Wine':{alcohol:8,difficulty:4,distill:0,barrel:'Any',aging:'16 yrs'},'Resinated Wine':{alcohol:8,difficulty:5,distill:0,barrel:'Any',aging:'18 yrs'},'Red Wine':{alcohol:8,difficulty:4,distill:0,barrel:'Any',aging:'20 yrs'},'Date Wine':{alcohol:8,difficulty:4,distill:0,barrel:'Any',aging:'14 yrs'},'Sparkling Wine':{alcohol:8,difficulty:5,distill:0,barrel:'Any',aging:'14 yrs'},'White Wine':{alcohol:7,difficulty:4,distill:0,barrel:'Any',aging:'16 yrs'},'Sugarcane Wine':{alcohol:7,difficulty:4,distill:0,barrel:'Any',aging:'10 yrs'},'Herbal Wine':{alcohol:7,difficulty:4,distill:0,barrel:'Any',aging:'12 yrs'},'Clairet':{alcohol:7,difficulty:4,distill:0,barrel:'Any',aging:'6 yrs'},'Apple Cider':{alcohol:6,difficulty:3,distill:0,barrel:'Any',aging:'4 yrs'},'Dark Beer':{alcohol:7,difficulty:2,distill:0,barrel:'Acacia',aging:'8 yrs'},'Klosterbier':{alcohol:8,difficulty:3,distill:0,barrel:'Spruce',aging:'10 yrs'},'Koyt Beer':{alcohol:7,difficulty:3,distill:0,barrel:'Any',aging:'6 yrs'},'Red Ale':{alcohol:6,difficulty:2,distill:0,barrel:'Any',aging:'5 yrs'},'Melomel':{alcohol:9,difficulty:4,distill:0,barrel:'Any',aging:'8 yrs'},'Medovukha':{alcohol:7,difficulty:3,distill:0,barrel:'Any',aging:'6 yrs'},'Airag':{alcohol:6,difficulty:4,distill:0,barrel:'Any',aging:'6 yrs'},'Wheat Beer':{alcohol:5,difficulty:1,distill:0,barrel:'Birch',aging:'3 yrs'},'Wheatbeer':{alcohol:5,difficulty:1,distill:0,barrel:'Birch',aging:'2 yrs'},'Ale':{alcohol:5,difficulty:1,distill:0,barrel:'Any',aging:'3 yrs'},'Grodziskie':{alcohol:5,difficulty:3,distill:0,barrel:'Any',aging:'4 yrs'},'Budweiser':{alcohol:5,difficulty:2,distill:0,barrel:'Any',aging:'4 yrs'},'Mead':{alcohol:9,difficulty:2,distill:0,barrel:'Any',aging:'8 yrs'},'Vinegar':{alcohol:-5,difficulty:2,distill:0,barrel:'Any',aging:'6 yrs'}};
+const BREW_QUALITIES=['Disgusting','Bad','Weak','Normal','Good','Excellent'];
+function checkBrew(item){
+  const panel=document.getElementById('brew-panel'),fields=document.getElementById('brew-fields');
+  if(!BREW_DATA[item]){panel.classList.add('hidden');fields.innerHTML='';return;}
+  const d=BREW_DATA[item];
+  panel.classList.remove('hidden');
+  const alcColor=d.alcohol<0?'#bb4444':d.alcohol>=15?'#c8a86a':'#80bb80';
+  fields.innerHTML=`<div class="fgrp"><label>Batch Quality</label><div class="csw" style="width:100%"><button class="csb" id="csb-bqual" onclick="toggleDrop('drop-bqual','csb-bqual')" style="width:100%"><span class="csb-label" id="csb-bqual-lbl">Select…</span><span class="arr">▾</span></button><div class="drop hidden" id="drop-bqual">${BREW_QUALITIES.map(q=>`<div class="di" onclick="pickLSField('bqual','${q}','csb-bqual-lbl','drop-bqual','csb-bqual')">${q}</div>`).join('')}</div></div></div><div class="fgrp" style="align-self:center"><label>Alcohol Content</label><div style="font-family:'Cinzel',serif;font-size:14px;color:${alcColor};padding:6px 0;">${d.alcohol<0?'−'+Math.abs(d.alcohol):d.alcohol}% ABV${d.alcohol<0?'<span style="font-size:9px;color:var(--ink-faint)"> (acid)</span>':''}</div></div><div class="fgrp" style="align-self:center"><label>Difficulty</label><div style="font-family:'Cinzel',serif;font-size:14px;color:var(--gold-bright);padding:6px 0;">${'⬥'.repeat(d.difficulty)}${'⬦'.repeat(7-d.difficulty)} &nbsp;<span style="font-size:9px;color:var(--ink-faint)">${d.difficulty}/7</span></div></div><div class="fgrp" style="align-self:center"><label>Aging Required</label><div style="font-family:'Cinzel',serif;font-size:13px;color:var(--parchment-light);padding:6px 0;">${d.aging}</div></div><div class="fgrp" style="align-self:center"><label>Barrel Wood</label><div style="font-family:'Cinzel',serif;font-size:13px;color:var(--parchment-light);padding:6px 0;">${d.barrel}</div></div>${d.distill>0?`<div class="fgrp" style="align-self:center"><label>Distilled</label><div style="font-family:'Cinzel',serif;font-size:13px;color:#c8a86a;padding:6px 0;">${d.distill}x runs</div></div>`:''}`;
+}
+function getBrewNote(){
+  const item=document.getElementById('f-item').value.trim();
+  if(!BREW_DATA[item])return'';
+  const d=BREW_DATA[item];
+  const parts=[];
+  const qual=document.getElementById('csb-bqual-lbl');
+  if(qual&&qual.textContent!=='Select…')parts.push(qual.textContent);
+  parts.push((d.alcohol<0?'−'+Math.abs(d.alcohol):d.alcohol)+'% ABV');
+  parts.push('Diff '+d.difficulty+'/7');
+  parts.push(d.aging);
+  if(d.barrel!=='Any')parts.push(d.barrel+' barrel');
+  if(d.distill>0)parts.push('Distilled ×'+d.distill);
+  return parts.length?'['+parts.join(' | ')+']':'';
+}
+function calcPreview(){
+  const q=parseFloat(document.getElementById('f-qty').value)||0;
+  const p=parseFloat(document.getElementById('f-price').value)||0;
+  const el=document.getElementById('tprev');
+  if(q>0&&p>0){
+    document.getElementById('tprev-v').textContent=(q*p).toLocaleString()+' ⚙ Ducats';
+    document.getElementById('tprev-d').textContent=formType==='sell'?'← You receive':'→ You pay';
+    el.classList.remove('hidden');
+  } else el.classList.add('hidden');
+}
+function stepNum(id,dir){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const step=parseFloat(el.step)||1,min=el.min!==''?parseFloat(el.min):-Infinity,cur=parseFloat(el.value)||0;
+  el.value=Math.max(min,+(cur+step*dir).toFixed(10));
+  el.dispatchEvent(new Event('input'));
+}
+
+// ══════════════════════════════════════════
+// SAVE TRADE → FIRESTORE
+// ══════════════════════════════════════════
+async function saveTrade(){
+  if(!currentOrg){ toast('You must be in a Nation/Organization to record trades.', true); return; }
+  if(!currentUserDoc._isMod && !['merchant','leader'].includes(currentUserDoc.role)){ toast('You need Merchant rank or above to record trades.', true); return; }
+  const nation=document.getElementById('f-nation').value.trim();
+  const item=document.getElementById('f-item').value.trim();
+  const qty=parseFloat(document.getElementById('f-qty').value);
+  const price=parseFloat(document.getElementById('f-price').value);
+  const date=document.getElementById('f-date').value;
+  const notesRaw=document.getElementById('f-notes').value.trim();
+  const lsNote=getLivestockNote(), smNote=getSmithNote(), brNote=getBrewNote();
+  const prefixes=[smNote,brNote,lsNote].filter(Boolean).join(' ');
+  const notes=(prefixes&&notesRaw)?prefixes+' '+notesRaw:(prefixes||notesRaw);
+  if(!nation||!item||!qty||!price||!date){ toast('Please fill in Nation, Item, Quantity, Price and Date.', true); return; }
+
+  const tradeData = {
+    nation, item, type: formType, qty, price, date, notes,
+    createdBy: currentUser.uid,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    orgId: currentOrg.id,
+  };
+
+  try {
+    await db.collection('orgs').doc(currentOrg.id).collection('trades').add(tradeData);
+    // Update global anonymous stats
+    await updateGlobalStats(item, qty, qty * price);
+    // Add trading partner to list
+    if(!tradingNations.includes(nation)){
+      tradingNations.push(nation);
+      tradingNations.sort();
+    }
+    // Reset form
+    ['f-nation','f-item','f-qty','f-price','f-notes'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+    checkLivestock(''); checkSmith(''); checkBrew('');
+    document.getElementById('tprev').classList.add('hidden');
+    toast('Trade recorded in ledger.');
+    setTimeout(()=>switchTab('ledger'), 650);
+  } catch(e){ toast('Error saving trade: '+e.message, true); }
+}
+
+// ══════════════════════════════════════════
+// GLOBAL STATS
+// ══════════════════════════════════════════
+async function updateGlobalStats(item, qtyDelta, valueDelta){
+  try {
+    const slug = item.replace(/[^a-zA-Z0-9]/g,'_').toLowerCase();
+    await db.collection('globalStats').doc(slug).set({
+      item,
+      totalQty: firebase.firestore.FieldValue.increment(qtyDelta),
+      tradeCount: firebase.firestore.FieldValue.increment(qtyDelta > 0 ? 1 : -1),
+      totalValue: firebase.firestore.FieldValue.increment(valueDelta),
+    }, { merge: true });
+  } catch(e){ console.warn('Global stats update failed:', e); }
+}
+
+async function loadGlobalGraph(){
+  const body = document.getElementById('global-graph-body');
+  if(!body) return;
+  try {
+    const snap = await db.collection('globalStats').orderBy('totalValue','desc').limit(25).get();
+    if(snap.empty){
+      body.innerHTML='<div class="empty"><span class="icon">🌐</span><p>No global trade data yet.</p></div>';
+      return;
+    }
+    const data = snap.docs.map(d=>({...d.data()}));
+    body.innerHTML = `<div class="cc" style="margin-bottom:0"><div class="ct">Top 25 Most Traded Items — All Realms Combined</div><canvas id="cg-chart" height="280"></canvas></div>`;
+    const g='rgba(36,22,5,.7)', tf={family:"'Cinzel',serif",size:9}, tc='#7a5828';
+    if(cG) cG.destroy();
+    cG = new Chart(document.getElementById('cg-chart'),{
+      type:'bar',
+      data:{
+        labels: data.map(d=>d.item),
+        datasets:[{
+          label:'Total Value (⚙)',
+          data: data.map(d=>d.totalValue||0),
+          backgroundColor: data.map((_,i)=>CHART_C[i%CHART_C.length]),
+          borderWidth:0,
+        }]
+      },
+      options:{
+        indexAxis:'y',responsive:true,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>' '+Number(c.raw).toLocaleString()+' ⚙ total traded'}}},
+        scales:{
+          x:{grid:{color:g},ticks:{color:tc,font:tf}},
+          y:{grid:{display:false},ticks:{color:'#c8a86a',font:{family:"'IM Fell English',serif",size:11}}}
+        }
+      }
+    });
+  } catch(e){
+    body.innerHTML='<div class="loading">Could not load global data.</div>';
+  }
+}
+
+// ══════════════════════════════════════════
+// STATS (your org)
+// ══════════════════════════════════════════
+function renderStats(){
+  const body=document.getElementById('stats-body');
+  if(!trades.length){body.innerHTML='<div class="empty"><span class="icon">📊</span><p>No trades to analyze yet.</p></div>';return;}
+  const tot=trades.reduce((s,t)=>s+t.price*t.qty,0);
+  const sv=trades.filter(t=>t.type==='sell').reduce((s,t)=>s+t.price*t.qty,0);
+  const bv=trades.filter(t=>t.type==='buy').reduce((s,t)=>s+t.price*t.qty,0);
+  const pr=sv-bv;
+  const bN={};trades.forEach(t=>{if(!bN[t.nation])bN[t.nation]={n:0,v:0};bN[t.nation].n++;bN[t.nation].v+=t.price*t.qty;});
+  const tN=Object.entries(bN).sort((a,b)=>b[1].v-a[1].v).slice(0,8);
+  const bI={};trades.forEach(t=>{if(!bI[t.item])bI[t.item]={n:0,v:0};bI[t.item].n++;bI[t.item].v+=t.price*t.qty;});
+  const tI=Object.entries(bI).sort((a,b)=>b[1].v-a[1].v).slice(0,8);
+  const bM={};trades.forEach(t=>{const k=t.date.slice(0,7);if(!bM[k])bM[k]=0;bM[k]+=t.price*t.qty;});
+  const months=Object.entries(bM).sort((a,b)=>a[0].localeCompare(b[0]));
+  const orgLabel = currentOrg ? `${currentOrg.type==='nation'?'🏰':'⚙'} ${currentOrg.name}` : 'Your Ledger';
+  body.innerHTML=`<div class="stitle">${orgLabel} — Ledger Statistics</div>
+  <div class="sg">
+    <div class="sc"><div class="sv">${trades.length}</div><div class="sk">Trades</div></div>
+    <div class="sc"><div class="sv" style="font-size:19px">${tot.toLocaleString()}</div><div class="sk">⚙ Total</div></div>
+    <div class="sc"><div class="sv" style="font-size:19px;color:#80bb80">${sv.toLocaleString()}</div><div class="sk">⚙ Sold</div></div>
+    <div class="sc"><div class="sv" style="font-size:19px;color:#bb8080">${bv.toLocaleString()}</div><div class="sk">⚙ Bought</div></div>
+    <div class="sc"><div class="sv" style="font-size:19px;color:${pr>=0?'#80bb80':'#bb8080'}">${pr>=0?'+':''}${pr.toLocaleString()}</div><div class="sk">⚙ Net</div></div>
+    <div class="sc"><div class="sv">${new Set(trades.map(t=>t.nation)).size}</div><div class="sk">Nations</div></div>
+    <div class="sc"><div class="sv">${new Set(trades.map(t=>t.item)).size}</div><div class="sk">Items</div></div>
+    <div class="sc"><div class="sv">${trades.filter(t=>t.type==='sell').length}</div><div class="sk">Sell Orders</div></div>
+  </div>
+  <div class="cg">
+    <div class="cc"><div class="ct">Top Nations by Trade Value</div><canvas id="cn" height="220"></canvas></div>
+    <div class="cc"><div class="ct">Top Items by Trade Value</div><canvas id="ci" height="220"></canvas></div>
+    ${months.length>1?`<div class="cc" style="grid-column:1/-1"><div class="ct">Trade Volume Over Time</div><canvas id="ctm" height="160"></canvas></div>`:''}
+    <div class="cc"><div class="ct">Buy vs Sell Split</div><canvas id="cp" height="200"></canvas></div>
+  </div>`;
+  const g='rgba(36,22,5,.7)',tf={family:"'Cinzel',serif",size:9},tc='#7a5828',tt={callbacks:{label:c=>' '+Number(c.raw).toLocaleString()+' ⚙'}};
+  if(cN)cN.destroy();cN=new Chart(document.getElementById('cn'),{type:'bar',data:{labels:tN.map(([n])=>n),datasets:[{label:'Ducats',data:tN.map(([,d])=>d.v),backgroundColor:CHART_C.slice(0,tN.length),borderWidth:0}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false},tooltip:tt},scales:{x:{grid:{color:g},ticks:{color:tc,font:tf}},y:{grid:{display:false},ticks:{color:'#c8a86a',font:{family:"'IM Fell English',serif",size:11}}}}}});
+  if(cI)cI.destroy();cI=new Chart(document.getElementById('ci'),{type:'bar',data:{labels:tI.map(([n])=>n),datasets:[{label:'Ducats',data:tI.map(([,d])=>d.v),backgroundColor:CHART_C.slice(2).concat(CHART_C.slice(0,2)),borderWidth:0}]},options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false},tooltip:tt},scales:{x:{grid:{color:g},ticks:{color:tc,font:tf}},y:{grid:{display:false},ticks:{color:'#c8a86a',font:{family:"'IM Fell English',serif",size:11}}}}}});
+  if(months.length>1){if(cT)cT.destroy();cT=new Chart(document.getElementById('ctm'),{type:'line',data:{labels:months.map(([k])=>k),datasets:[{label:'Ducats',data:months.map(([,v])=>v),borderColor:'#c89010',backgroundColor:'rgba(160,110,8,.07)',fill:true,tension:0.35,pointBackgroundColor:'#d4a017',pointRadius:4,borderWidth:2}]},options:{responsive:true,plugins:{legend:{display:false},tooltip:tt},scales:{x:{grid:{color:g},ticks:{color:tc,font:tf}},y:{grid:{color:g},ticks:{color:tc,font:tf}}}}});}
+  if(cP)cP.destroy();cP=new Chart(document.getElementById('cp'),{type:'doughnut',data:{labels:['Sold','Bought'],datasets:[{data:[sv,bv],backgroundColor:['#36583e','#583620'],borderColor:['#243c2a','#3c2414'],borderWidth:2}]},options:{responsive:true,plugins:{legend:{labels:{color:'#a8885a',font:{family:"'Cinzel',serif",size:10}}},tooltip:tt}}});
+}
+
+// ══════════════════════════════════════════
+// NATIONS DOSSIER
+// ══════════════════════════════════════════
+function renderNations(){
+  const body=document.getElementById('nations-body');
+  if(!tradingNations.length){body.innerHTML='<div class="empty"><span class="icon">🏰</span><p>No trading partners recorded yet.</p></div>';return;}
+  const stats=tradingNations.map(n=>{
+    const nt=trades.filter(t=>t.nation===n);
+    const sv=nt.filter(t=>t.type==='sell').reduce((s,t)=>s+t.price*t.qty,0);
+    const bv=nt.filter(t=>t.type==='buy').reduce((s,t)=>s+t.price*t.qty,0);
+    const items=[...new Set(nt.map(t=>t.item))];
+    const last=[...nt].sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+    return{n,nt,sv,bv,items,last};
+  }).sort((a,b)=>(b.sv+b.bv)-(a.sv+a.bv));
+  body.innerHTML=stats.map(({n,nt,sv,bv,items,last})=>`
+    <div class="nc">
+      <div style="display:flex;align-items:flex-start;gap:14px;flex:1;min-width:200px">
+        <div class="nseal">⚜</div>
+        <div>
+          <div class="nn">${esc(n)}</div>
+          <div class="ntags">${items.slice(0,6).map(i=>`<span class="ntag">${esc(i)}</span>`).join('')}${items.length>6?`<span class="ntag">+${items.length-6} more</span>`:''}</div>
+        </div>
+      </div>
+      <div class="nm">
+        <div class="ms"><div class="mv">${nt.length}</div><div class="mk">Trades</div></div>
+        <div class="ms"><div class="mv" style="color:#80bb80">${sv.toLocaleString()}</div><div class="mk">Sold ⚙</div></div>
+        <div class="ms"><div class="mv" style="color:#bb8080">${bv.toLocaleString()}</div><div class="mk">Bought ⚙</div></div>
+        <div class="ms"><div class="mv" style="font-size:11px">${last?last.date:'—'}</div><div class="mk">Last Trade</div></div>
+      </div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════
+// ADMIN CONSOLE
+// ══════════════════════════════════════════
+async function loadMembersPanel(){
+  var body = document.getElementById('members-body');
+  if(!body) return;
+  var isLeaderOrMod = currentUserDoc._isMod || currentUserDoc.role === 'leader';
+  if(!isLeaderOrMod){
+    body.innerHTML = '<div style="color:var(--ink-faint);font-family:Cinzel,serif;font-size:11px;padding:30px 0;text-align:center;letter-spacing:2px;">ACCESS RESTRICTED — Leaders &amp; Moderators Only</div>';
+    return;
+  }
+
+  body.innerHTML = '<div class="loading">Loading members…</div>';
+  loadBlacklist();
+
+  try {
+    var orgId = currentUserDoc.orgId;
+    if(!orgId){ body.innerHTML = '<div style="color:var(--ink-faint);font-size:12px;padding:20px 0;">Not in an organization.</div>'; return; }
+
+    // Query users by orgId field (works for active org + legacy single-org users)
+    var snap = await db.collection('users').where('orgId','==',orgId).get();
+    var categories = { leader: [], merchant: [], viewer: [] };
+
+    // Always include self in case Firestore query misses us
+    var seenUids = {};
+    var allDocs = [];
+    snap.docs.forEach(function(d){ seenUids[d.id]=true; allDocs.push(d); });
+    if(!seenUids[currentUser.uid]){
+      var selfSnap = await db.collection('users').doc(currentUser.uid).get();
+      if(selfSnap.exists) allDocs.push(selfSnap);
+    }
+
+    allDocs.forEach(function(d){
+      var u = d.data(); u._uid = d.id;
+      // Check orgMemberships for this specific org's role
+      var role = null;
+      if(u.orgMemberships && u.orgMemberships.length){
+        var m = u.orgMemberships.find(function(x){ return x.orgId === orgId; });
+        if(m) role = m.role;
+      }
+      if(!role) role = u.role || 'viewer';
+      u._displayRole = role;
+      if(!categories[role]) categories[role] = [];
+      categories[role].push(u);
+    });
+
+    var ROLES = ['viewer','merchant','leader'];
+    var catConfig = {
+      leader:   { label: 'Leaders',   icon: '👑', color: '#C8960C', bg: 'rgba(120,80,0,.18)',  border: 'rgba(180,120,10,.35)' },
+      merchant: { label: 'Merchants', icon: '⚙',  color: '#80bb80', bg: 'rgba(20,60,20,.18)',  border: 'rgba(40,100,40,.35)' },
+      viewer:   { label: 'Viewers',   icon: '👁',  color: '#9090cc', bg: 'rgba(20,20,60,.18)',  border: 'rgba(40,40,100,.35)' },
+    };
+
+    var html = '';
+
+    ['leader','merchant','viewer'].forEach(function(cat){
+      var members = categories[cat] || [];
+      var cfg = catConfig[cat];
+      html += '<div style="margin-bottom:18px;border:1px solid '+cfg.border+';border-radius:6px;overflow:hidden;background:'+cfg.bg+';">'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(0,0,0,.28);border-bottom:1px solid '+cfg.border+';">'
+            +   '<div style="display:flex;align-items:center;gap:8px;">'
+            +     '<span style="font-size:16px;">'+cfg.icon+'</span>'
+            +     '<span style="font-family:Cinzel,serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:'+cfg.color+';font-weight:bold;">'+cfg.label+'</span>'
+            +   '</div>'
+            +   '<span style="font-family:Cinzel,serif;font-size:9px;color:var(--ink-faint);letter-spacing:2px;">'+members.length+' member'+(members.length===1?'':'s')+'</span>'
+            + '</div>';
+
+      if(members.length === 0){
+        html += '<div style="padding:14px 16px;font-family:Cinzel,serif;font-size:9px;color:var(--ink-faint);letter-spacing:2px;text-align:center;text-transform:uppercase;">No '+cfg.label.toLowerCase()+' yet</div>';
+      } else {
+        members.forEach(function(u, idx2){
+          var uid = u._uid;
+          var isSelf = uid === currentUser.uid;
+          var isLast = idx2 === members.length - 1;
+          var avatar = u.photoURL
+            ? '<img src="'+u.photoURL+'" style="width:32px;height:32px;border-radius:50%;margin-right:12px;flex-shrink:0;border:2px solid '+cfg.border+';">'
+            : '<div style="width:32px;height:32px;border-radius:50%;background:rgba(80,60,20,.4);margin-right:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;border:1px solid var(--border);">?</div>';
+          var roleOpts = ROLES.map(function(r){
+            return '<option value="'+r+'"'+(u._displayRole===r?' selected':'')+'>'+r.charAt(0).toUpperCase()+r.slice(1)+'</option>';
+          }).join('');
+          var controls = isSelf
+            ? '<span style="font-family:Cinzel,serif;font-size:9px;color:'+cfg.color+';letter-spacing:2px;padding:4px 10px;background:rgba(255,200,50,.08);border:1px solid '+cfg.border+';border-radius:3px;">YOU</span>'
+            : '<div style="display:flex;gap:6px;align-items:center;">'
+              + '<select class="fi" style="padding:4px 8px;font-size:11px;width:112px;" onchange="changeMemberRole(this.dataset.uid,this.value)" data-uid="'+uid+'">'+roleOpts+'</select>'
+              + '<button class="btn-del" style="padding:4px 10px;" onclick="kickMember(this.dataset.uid,this.dataset.name)" data-uid="'+uid+'" data-name="'+esc(u.displayName||u.email)+'" title="Remove">✕</button>'
+              + '</div>';
+          html += '<div style="display:flex;align-items:center;padding:12px 16px;'+(isLast?'':'border-bottom:1px solid '+cfg.border+';')+'">'
+                + avatar
+                + '<div style="flex:1;min-width:0;">'
+                +   '<div style="font-family:Cinzel,serif;font-size:11px;color:var(--parchment);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(u.displayName||u.email)+'</div>'
+                +   '<div style="font-size:9px;color:var(--ink-faint);letter-spacing:1px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(u.email)+'</div>'
+                + '</div>'
+                + controls + '</div>';
+        });
+      }
+      html += '</div>';
+    });
+
+    // Blacklisted — always rendered as 4th block
+    var blSnap = await db.collection('orgs').doc(orgId).collection('blacklist').get();
+    var blDocs = blSnap.docs || [];
+    html += '<div style="margin-bottom:18px;border:1px solid rgba(160,30,30,.4);border-radius:6px;overflow:hidden;background:rgba(80,10,10,.15);">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(0,0,0,.3);border-bottom:1px solid rgba(160,30,30,.4);">'
+          +   '<div style="display:flex;align-items:center;gap:8px;">'
+          +     '<span style="font-size:16px;">🚫</span>'
+          +     '<span style="font-family:Cinzel,serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#cc4444;font-weight:bold;">Blacklisted</span>'
+          +   '</div>'
+          +   '<span style="font-family:Cinzel,serif;font-size:9px;color:var(--ink-faint);letter-spacing:2px;">'+blDocs.length+' banned</span>'
+          + '</div>';
+
+    if(blDocs.length === 0){
+      html += '<div style="padding:14px 16px;font-family:Cinzel,serif;font-size:9px;color:var(--ink-faint);letter-spacing:2px;text-align:center;text-transform:uppercase;">No banned players</div>';
+    } else {
+      blDocs.forEach(function(d, idx2){
+        var data = d.data();
+        var isLast = idx2 === blDocs.length - 1;
+        html += '<div style="display:flex;align-items:center;padding:12px 16px;'+(isLast?'':'border-bottom:1px solid rgba(160,30,30,.3);">')+'">'
+              + '<div style="width:32px;height:32px;border-radius:50%;background:rgba(120,20,20,.4);margin-right:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;">🚫</div>'
+              + '<div style="flex:1;min-width:0;">'
+              +   '<div style="font-family:Cinzel,serif;font-size:11px;color:#cc6060;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(data.email)+'</div>'
+              +   '<div style="font-size:9px;color:var(--ink-faint);letter-spacing:1px;margin-top:2px;">Banned by '+esc(data.bannedBy||'unknown')+'</div>'
+              + '</div>'
+              + '<button class="btn-p" style="padding:4px 12px;font-size:10px;background:rgba(30,70,30,.5);border-color:rgba(50,120,50,.5);color:#80cc80;" onclick="removeFromBlacklist(this.dataset.e)" data-e="'+esc(data.email)+'">Unban</button>'
+              + '</div>';
+      });
+    }
+    html += '</div>';
+
+    body.innerHTML = html;
+  } catch(e){
+    body.innerHTML = '<div style="color:#cc6060;font-size:11px;padding:20px 0;">Error: '+esc(e.message)+'</div>';
+    console.error('loadMembersPanel:', e);
+  }
+}
+
+async function changeMemberRole(uid, newRole){
+  try {
+    await db.collection('users').doc(uid).update({ role: newRole });
+    toast('Role updated to ' + newRole.charAt(0).toUpperCase() + newRole.slice(1) + '.');
+  } catch(e){
+    toast('Error updating role: ' + e.message, true);
+    loadMembersPanel(); // revert UI
+  }
+}
+
+async function kickMember(uid, name){
+  if(!confirm('Kick '+name+' from this organization? They can rejoin with the code.')) return;
+  try {
+    var memberships = [];
+    var uSnap = await db.collection('users').doc(uid).get();
+    if(uSnap.exists){
+      memberships = (uSnap.data().orgMemberships||[]).filter(function(m){ return m.orgId !== currentUserDoc.orgId; });
+    }
+    var newOrgId = memberships.length > 0 ? memberships[0].orgId : null;
+    await db.collection('users').doc(uid).update({
+      orgId: newOrgId,
+      role: newOrgId ? memberships[0].role : 'viewer',
+      orgMemberships: memberships,
+    });
+    await db.collection('orgs').doc(currentUserDoc.orgId).update({ memberCount: firebase.firestore.FieldValue.increment(-1) });
+    toast(name+' has been removed from the organization.');
+    loadMembersPanel();
+  } catch(e){ toast('Error: '+e.message, true); }
+}
+
+async function addToBlacklist(){
+  var email = document.getElementById('blacklist-email-input').value.trim().toLowerCase();
+  if(!email){ toast('Enter an email address.', true); return; }
+  if(!currentUserDoc.orgId){ toast('You are not in an org.', true); return; }
+  try {
+    await db.collection('orgs').doc(currentUserDoc.orgId).collection('blacklist').doc(email).set({
+      email: email,
+      bannedBy: currentUser.email,
+      bannedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    document.getElementById('blacklist-email-input').value = '';
+    toast(email+' added to blacklist.');
+    loadBlacklist();
+  } catch(e){ toast('Error: '+e.message, true); }
+}
+
+async function removeFromBlacklist(email){
+  if(!currentUserDoc.orgId) return;
+  try {
+    await db.collection('orgs').doc(currentUserDoc.orgId).collection('blacklist').doc(email).delete();
+    toast(email+' removed from blacklist.');
+    loadBlacklist();
+  } catch(e){ toast('Error: '+e.message, true); }
+}
+
+async function loadBlacklist(){
+  var el = document.getElementById('blacklist-body');
+  if(!el || !currentUserDoc.orgId) return;
+  try {
+    var snap = await db.collection('orgs').doc(currentUserDoc.orgId).collection('blacklist').get();
+    if(snap.empty){
+      el.innerHTML = '<div style="font-family:Cinzel,serif;font-size:9px;color:var(--ink-faint);letter-spacing:2px;text-transform:uppercase;padding:6px 0;">No banned players.</div>';
+      return;
+    }
+    var rows = '';
+    snap.docs.forEach(function(d){
+      var data = d.data();
+      rows += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">'
+            + '<span style="font-family:Cinzel,serif;font-size:11px;color:#cc6060;">'+esc(data.email)+'</span>'
+            + '<button class="btn-del" style="padding:4px 10px;" onclick="removeFromBlacklist(this.dataset.e)" data-e="'+esc(data.email)+'">Remove</button>'
+            + '</div>';
+    });
+    el.innerHTML = rows;
+  } catch(e){ el.innerHTML = '<div style="color:#cc6060;font-size:10px;">Error loading blacklist.</div>'; }
+}
+
+async function loadAdminConsole(){
+  const body = document.getElementById('admin-body');
+  if(!body) return;
+  if(!currentUserDoc._isMod) return;
+  loadModeratorList();
+  body.innerHTML='<div class="loading">Loading all organizations…</div>';
+  try {
+    const orgsSnap = await db.collection('orgs').get();
+    if(orgsSnap.empty){
+      body.innerHTML='<div class="empty"><span class="icon">🏰</span><p>No organizations exist yet.</p></div>';
+      return;
+    }
+    body.innerHTML = orgsSnap.docs.map(orgDoc=>{
+      const org = orgDoc.data();
+      return `<div class="admin-org-card">
+        <div class="admin-org-header" onclick="toggleAdminOrg('adm-${orgDoc.id}')">
+          <div>
+            <div class="admin-org-name">${esc(org.name)} <span style="font-family:'Cinzel',serif;font-size:9px;color:var(--ink-faint);letter-spacing:1px;">${org.type==='nation'?'🏰 Nation':'⚙ Organization'}</span></div>
+            <div class="admin-org-meta">Join Code: ${org.joinCode} · Members: ${org.memberCount||'?'} · Leader: ${esc(org.leaderId||'?')}</div>
+          </div>
+          <span style="color:var(--gold-dim);font-size:10px;">▶</span>
+        </div>
+        <div class="admin-org-body" id="adm-${orgDoc.id}">
+          <button class="btn-sm" onclick="loadAdminOrgTrades('${orgDoc.id}','adm-trades-${orgDoc.id}')">Load Trades</button>
+          <button class="btn-del" style="margin-left:8px" onclick="adminDeleteOrg('${orgDoc.id}','${esc(org.name)}')">✕ Delete Org</button>
+          <div id="adm-trades-${orgDoc.id}" style="margin-top:12px;"></div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e){ body.innerHTML='<div class="loading">Error: '+esc(e.message)+'</div>'; }
+}
+function toggleAdminOrg(id){
+  const el=document.getElementById(id);
+  if(el) el.classList.toggle('open');
+}
+async function loadAdminOrgTrades(orgId, targetId){
+  const target = document.getElementById(targetId);
+  if(!target) return;
+  target.innerHTML='<div class="loading">Loading…</div>';
+  try {
+    const snap = await db.collection('orgs').doc(orgId).collection('trades').orderBy('date','desc').limit(50).get();
+    if(snap.empty){ target.innerHTML='<div style="font-family:\'Cinzel\',serif;font-size:9px;color:var(--ink-faint);letter-spacing:2px;text-transform:uppercase;padding:10px 0;">No trades recorded.</div>'; return; }
+    const tdata = snap.docs.map(d=>({id:d.id,...d.data()}));
+    target.innerHTML=`<div class="tw"><table><thead><tr><th>Date</th><th>Nation</th><th>Item</th><th>Type</th><th>Qty</th><th>Total ⚙</th></tr></thead><tbody>${tdata.map(t=>`<tr><td class="datec">${esc(t.date)}</td><td><span class="bn">${esc(t.nation||'—')}</span></td><td><span class="bi">${esc(t.item)}</span></td><td><span class="${t.type==='sell'?'bts':'btb'}">${t.type==='sell'?'SELL':'BUY'}</span></td><td style="font-family:'Cinzel',serif;font-size:12px">${Number(t.qty).toLocaleString()}</td><td class="duc">${(t.price*t.qty).toLocaleString()}</td></tr>`).join('')}</tbody></table></div>`;
+  } catch(e){ target.innerHTML='<div class="loading">Error: '+esc(e.message)+'</div>'; }
+}
+async function adminDeleteOrg(orgId, orgName){
+  if(!confirm(`DELETE "${orgName}" and all its trades? This cannot be undone.`)) return;
+  try {
+    // Delete all trades in subcollection
+    const tradesSnap = await db.collection('orgs').doc(orgId).collection('trades').get();
+    const batch = db.batch();
+    tradesSnap.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    // Delete org doc
+    await db.collection('orgs').doc(orgId).delete();
+    // Reset all users in that org
+    const usersSnap = await db.collection('users').where('orgId','==',orgId).get();
+    const b2 = db.batch();
+    usersSnap.docs.forEach(d => b2.update(d.ref, { orgId: null, orgType: null, role: 'viewer' }));
+    await b2.commit();
+    toast('Organization deleted.');
+    loadAdminConsole();
+  } catch(e){ toast('Error: '+e.message, true); }
+}
+async function appointModerator(){
+  const email = document.getElementById('mod-email-input').value.trim().toLowerCase();
+  if(!email){ toast('Enter an email address.', true); return; }
+  try {
+    // Write to /moderators collection — rules and app both check here
+    await db.collection('moderators').doc(email).set({
+      email,
+      grantedBy: currentUser.email,
+      grantedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    toast(email + ' has been granted Moderator rank.');
+    document.getElementById('mod-email-input').value='';
+    // Reload mod list display
+    loadModeratorList();
+  } catch(e){ toast('Error: '+e.message, true); }
+}
+
+async function revokeModerator(email){
+  if(!confirm('Revoke moderator rank from ' + email + '?')) return;
+  try {
+    await db.collection('moderators').doc(email).delete();
+    toast(email + ' moderator rank revoked.');
+    loadModeratorList();
+  } catch(e){ toast('Error: '+e.message, true); }
+}
+
+async function loadModeratorList(){
+  var el = document.getElementById('mod-list');
+  if(!el) return;
+  try {
+    var snap = await db.collection('moderators').get();
+    if(snap.empty){
+      el.innerHTML = '<div style="font-family:Cinzel,serif;font-size:9px;color:var(--ink-faint);letter-spacing:2px;text-transform:uppercase;padding:8px 0;">No moderators appointed yet.</div>';
+      return;
+    }
+    var rows = '';
+    snap.docs.forEach(function(d){
+      var data = d.data();
+      var isSelf = data.email === currentUser.email;
+      var youTag = isSelf ? ' <span style="font-family:Cinzel,serif;font-size:8px;color:var(--ink-faint);">(you)</span>' : '';
+      var revokeBtn = isSelf ? '' : '<button class="btn-del" onclick="revokeModerator(this.dataset.e)" data-e="' + esc(data.email) + '">Revoke</button>';
+      rows += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">'
+            + '<div><span style="font-family:Cinzel,serif;font-size:11px;color:var(--gold-bright);">' + esc(data.email) + '</span>' + youTag + '</div>'
+            + revokeBtn + '</div>';
+    });
+    el.innerHTML = rows;
+  } catch(e){ el.innerHTML = '<div style="color:#cc6060;font-size:10px;">Error loading moderators.</div>'; }
+}
+
+// ══════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function toast(msg, isErr=false){
+  const el=document.createElement('div');
+  el.className='toast'+(isErr?' err':'');
+  el.textContent=msg;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),3000);
+}
+function openGitHub(){
+  window.open(GITHUB_RELEASES, '_blank');
+}
+</script>
+</body>
+</html>
