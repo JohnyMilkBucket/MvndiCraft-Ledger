@@ -1,0 +1,3327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+<title>Mvndicraft Trade Ledger</title>
+<link href="https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&family=IM+Fell+English:ital@0;1&family=Cinzel:wght@400;600;700&family=Cinzel+Decorative:wght@700&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<!-- Firebase Compat SDK -->
+<!-- Firebase Compat SDK v9 (stable for direct HTML use) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0d0a05;--paper:#1a1208;
+  --parchment:#d8ba82;--parchment-light:#ecd89a;
+  --ink:#f5e4b0;--ink-dim:#cda870;--ink-faint:#a08050;
+  --gold:#e0aa20;--gold-bright:#f5cc44;--gold-dim:#a07418;
+  --border:#4a3410;--border-bright:#7a5820;
+  --hover:rgba(212,160,23,0.09);
+}
+html,body{min-height:100vh;background:var(--bg);}
+body{
+  font-family:'IM Fell English',serif;color:var(--ink);font-size:16px;line-height:1.65;
+  background-image:
+    radial-gradient(ellipse at 15% 10%,rgba(80,45,5,.22) 0%,transparent 55%),
+    radial-gradient(ellipse at 85% 90%,rgba(50,25,5,.28) 0%,transparent 55%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='4' height='4' fill='%230d0a05'/%3E%3Crect x='0' y='0' width='1' height='1' fill='%231a1005' opacity='.5'/%3E%3C/svg%3E");
+}
+
+/* ─── AUTH OVERLAY ─── */
+.auth-overlay{
+  position:fixed;inset:0;z-index:9000;
+  background:radial-gradient(ellipse at 50% 30%,#1a1005 0%,#060402 100%);
+  display:flex;align-items:center;justify-content:center;
+}
+.auth-box{
+  text-align:center;padding:52px 48px;
+  background:rgba(20,14,4,.7);
+  border:1px solid var(--border-bright);border-radius:4px;
+  box-shadow:0 24px 80px rgba(0,0,0,.8),0 0 0 1px rgba(100,72,24,.2);
+  max-width:420px;width:90%;
+}
+.auth-seal{
+  width:72px;height:72px;margin:0 auto 22px;
+  background:radial-gradient(circle at 38% 35%,#d44040,#6e0a0a);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:32px;
+  box-shadow:0 4px 20px rgba(0,0,0,.7),0 0 0 1px rgba(180,40,40,.25);
+}
+.auth-title{
+  font-family:'UnifrakturMaguntia',cursive;font-size:44px;
+  color:var(--gold-bright);text-shadow:0 0 30px rgba(212,160,23,.4),0 2px 4px #000;
+}
+.auth-sub{
+  font-family:'Cinzel Decorative',serif;font-size:11px;letter-spacing:3px;
+  color:var(--parchment);margin:4px 0 8px;
+}
+.auth-rule{font-size:13px;color:var(--gold);opacity:.4;letter-spacing:8px;margin:8px 0 24px;}
+.auth-desc{
+  font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--ink-faint);margin-bottom:24px;line-height:1.6;
+}
+.btn-google{
+  display:inline-flex;align-items:center;gap:12px;
+  font-family:'Cinzel',serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  background:linear-gradient(180deg,#9a7408,#705206);
+  color:#eedca0;padding:13px 28px;cursor:pointer;border:1px solid var(--border-bright);
+  border-radius:2px;box-shadow:0 2px 12px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,210,80,.1);
+  transition:all .2s;
+}
+.btn-google:hover{background:linear-gradient(180deg,#ba8c0c,#8a6408);transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,0,0,.5),0 0 18px rgba(160,110,0,.12);}
+.btn-google img{width:18px;height:18px;border-radius:50%;background:#fff;padding:2px;}
+.auth-footer{margin-top:20px;font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;color:var(--ink-faint);}
+
+/* ─── ORG SETUP OVERLAY ─── */
+.org-overlay{
+  position:fixed;inset:0;z-index:8900;
+  background:rgba(6,4,2,.92);backdrop-filter:blur(4px);
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+}
+.org-box{
+  background:var(--paper);border:1px solid var(--border-bright);border-radius:4px;
+  padding:36px 32px;max-width:600px;width:100%;
+  box-shadow:0 20px 70px rgba(0,0,0,.8);
+}
+.org-title{
+  font-family:'Cinzel Decorative',serif;font-size:14px;color:var(--gold);
+  letter-spacing:2px;margin-bottom:6px;
+}
+.org-sub{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--ink-faint);text-transform:uppercase;margin-bottom:24px;}
+.org-tabs{display:flex;gap:0;margin-bottom:24px;border:1px solid var(--border);}
+.org-tab{
+  flex:1;padding:10px;text-align:center;cursor:pointer;
+  font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  color:var(--parchment);background:transparent;border:none;transition:all .2s;
+}
+.org-tab.on{background:rgba(212,160,23,.08);color:var(--gold-bright);}
+.org-card{display:none;}
+.org-card.on{display:block;}
+.org-type-row{display:flex;gap:10px;margin-bottom:14px;}
+.org-type-btn{
+  flex:1;padding:12px;cursor:pointer;
+  font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;
+  background:rgba(14,10,4,.8);border:1px solid var(--border);border-radius:2px;
+  color:var(--ink-faint);transition:all .2s;
+}
+.org-type-btn.on{border-color:var(--gold-dim);color:var(--gold-bright);background:rgba(212,160,23,.06);}
+.org-code-display{
+  font-family:'Cinzel Decorative',serif;font-size:28px;letter-spacing:8px;
+  color:var(--gold-bright);text-align:center;padding:16px;
+  background:rgba(14,10,4,.8);border:1px solid var(--border-bright);
+  border-radius:2px;margin:14px 0;text-shadow:0 0 14px rgba(212,160,23,.3);
+}
+
+/* ─── HEADER ─── */
+.page-shell{width:100%;background:#060402;position:relative;}
+.page-shell::before,.page-shell::after{content:'';position:fixed;top:0;bottom:0;width:clamp(0px,calc((100vw - 1600px)/2),220px);z-index:5;pointer-events:none;}
+.page-shell::before{left:0;background:linear-gradient(to right,#060402 70%,rgba(6,4,2,.4) 90%,transparent);}
+.page-shell::after{right:0;background:linear-gradient(to left,#060402 70%,rgba(6,4,2,.4) 90%,transparent);}
+.page-wrap{max-width:1600px;margin:0 auto;position:relative;}
+.hdr{
+  background:linear-gradient(180deg,#060402 0%,#100c05 40%,#0d0a05 100%);
+  border-bottom:1px solid var(--border);padding:clamp(8px,1.4vh,18px) clamp(10px,2vw,24px) clamp(6px,1vh,13px);
+  display:flex;align-items:center;gap:8px;
+  box-shadow:0 4px 30px rgba(0,0,0,.5);
+}
+.hdr::after{
+  content:'';position:absolute;bottom:0;left:8%;right:8%;height:1px;
+  background:linear-gradient(90deg,transparent,var(--gold-dim),var(--gold),var(--gold-dim),transparent);
+}
+.hdr-left{display:flex;align-items:center;gap:14px;}
+.seal{
+  width:48px;height:48px;flex-shrink:0;
+  background:radial-gradient(circle at 38% 35%,#d44040,#6e0a0a);
+  border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;
+  box-shadow:0 3px 12px rgba(0,0,0,.7),inset 0 1px 0 rgba(255,180,180,.18),0 0 0 1px rgba(180,40,40,.25);
+}
+h1{font-family:'UnifrakturMaguntia',cursive;font-size:clamp(24px,5vw,46px);color:var(--gold-bright);text-shadow:0 0 40px rgba(212,160,23,.5),0 2px 5px #000;letter-spacing:2px;}
+.hdeck{font-family:'Cinzel Decorative',serif;font-size:11px;color:var(--parchment);letter-spacing:3px;margin-top:1px;}
+.hrule{display:block;font-size:12px;color:var(--gold);opacity:.4;letter-spacing:8px;margin:3px 0 1px;}
+.hdr-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.join-code-badge{
+  display:flex;flex-direction:column;align-items:center;
+  background:rgba(14,10,4,.8);border:1px solid var(--border-bright);
+  border-radius:2px;padding:5px 12px;cursor:pointer;transition:border-color .2s;
+}
+.join-code-badge:hover{border-color:var(--gold-dim);}
+.jcl{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--ink-faint);}
+.jcv{font-family:'Cinzel Decorative',serif;font-size:14px;color:var(--gold-bright);letter-spacing:3px;}
+.user-chip{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(14,10,4,.8);border:1px solid var(--border);
+  border-radius:2px;padding:5px 10px;
+}
+.user-avatar{width:26px;height:26px;border-radius:50%;border:1px solid var(--border-bright);}
+.user-name{font-family:'Cinzel',serif;font-size:clamp(7px,0.75vw,9px);letter-spacing:1px;color:var(--parchment);max-width:clamp(60px,10vw,120px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.role-badge{
+  font-family:'Cinzel',serif;font-size:7px;letter-spacing:1px;text-transform:uppercase;
+  padding:1px 5px;border-radius:1px;
+}
+.role-viewer{background:rgba(50,50,80,.3);border:1px solid rgba(80,80,120,.4);color:#9090cc;}
+.role-merchant{background:rgba(50,80,50,.3);border:1px solid rgba(80,120,80,.4);color:#80bb80;}
+.role-leader{background:rgba(100,70,10,.3);border:1px solid rgba(160,110,20,.4);color:var(--gold-bright);}
+.role-moderator{background:rgba(80,10,10,.4);border:1px solid rgba(140,20,20,.5);color:#cc6060;}
+.btn-header{
+  font-family:'Cinzel',serif;font-size:10px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;
+  background:rgba(14,10,4,.8);border:1px solid var(--border);border-radius:2px;
+  color:var(--ink-faint);padding:6px 12px;cursor:pointer;transition:all .2s;
+}
+.btn-header:hover{border-color:var(--border-bright);color:var(--parchment);}
+.btn-signout{color:#884040;}
+.btn-signout:hover{border-color:rgba(120,40,40,.5);color:#cc6060;}
+
+/* ─── TABS ─── */
+.tabs{display:flex;flex-wrap:wrap;justify-content:center;background:#070503;border-bottom:1px solid var(--border);}
+.tb{font-family:'Cinzel',serif;font-size:clamp(10px,1.1vw,12px);font-weight:700;letter-spacing:2.5px;text-transform:uppercase;color:var(--ink-faint);background:none;border:none;border-bottom:2px solid transparent;padding:13px 18px 11px;cursor:pointer;transition:color .2s,border-color .2s;white-space:nowrap;}
+.tb:hover{color:var(--parchment);}
+.tb.on{color:var(--gold-bright);border-bottom-color:var(--gold);text-shadow:0 0 14px rgba(212,160,23,.3);}
+
+/* ─── PANEL ─── */
+.panel{max-width:100%;width:100%;margin:0 auto;padding:22px clamp(8px,2vw,24px) 80px;}
+.hidden{display:none!important;}
+
+/* ─── SECTION TITLE ─── */
+.stitle{font-family:'Cinzel Decorative',serif;font-size:16px;color:var(--gold-bright);letter-spacing:2px;margin-bottom:16px;padding-bottom:8px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
+.stitle::before,.stitle::after{content:'◆';font-size:7px;opacity:.4;}
+
+/* ─── CARD ─── */
+.card{background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:20px;margin-bottom:16px;box-shadow:0 6px 24px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.02);color:var(--ink);}
+
+/* ─── FORM ─── */
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));gap:12px;}
+.fgrp{display:flex;flex-direction:column;gap:5px;position:relative;}
+label{font-family:'Cinzel',serif;font-size:10px;letter-spacing:2.5px;text-transform:uppercase;color:var(--ink-dim);}
+.fi{background:#0e0a04;border:1px solid var(--border);border-radius:2px;color:var(--ink);font-family:'IM Fell English',serif;font-size:15px;padding:9px 12px;outline:none;width:100%;transition:border-color .2s,box-shadow .2s;}
+.fi:focus{border-color:var(--gold-dim);box-shadow:0 0 0 2px rgba(160,100,8,.18);}
+.fi::placeholder{color:var(--ink-faint);opacity:.65;}
+textarea.fi{min-height:68px;resize:vertical;}
+input[type=date].fi{color-scheme:dark;}
+select.fi{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238a6010'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;cursor:pointer;}
+select.fi option{background:#1a1005;color:var(--ink);}
+
+/* ─── CUSTOM SELECT ─── */
+.csw{position:relative;}
+.csb{display:flex;align-items:center;justify-content:space-between;background:#0e0a04;border:1px solid var(--border);border-radius:2px;color:var(--ink);font-family:'IM Fell English',serif;font-size:15px;padding:9px 12px;outline:none;width:100%;cursor:pointer;transition:border-color .2s,box-shadow .2s;text-align:left;}
+.csb .arr{font-family:sans-serif;font-size:10px;color:var(--ink-faint);transition:transform .18s;flex-shrink:0;margin-left:6px;}
+.csb.open,.csb:focus{border-color:var(--gold-dim);box-shadow:0 0 0 2px rgba(160,100,8,.18);}
+.csb.open .arr{transform:rotate(180deg);}
+.csb.ph{color:var(--ink-faint);opacity:.75;}
+.csb-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+/* ─── DROPDOWNS ─── */
+.drop{position:absolute;top:calc(100% + 3px);left:0;right:0;background:#110d05;border:1px solid var(--border-bright);border-radius:2px;z-index:400;max-height:240px;overflow-y:auto;box-shadow:0 14px 40px rgba(0,0,0,.75),0 0 0 1px rgba(100,72,24,.2);animation:dIn .12s ease;}
+@keyframes dIn{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
+.di{padding:9px 14px;cursor:pointer;font-size:14px;font-family:'IM Fell English',serif;color:var(--ink-dim);border-bottom:1px solid rgba(40,28,6,.6);transition:background .1s,color .1s;}
+.di:last-child{border-bottom:none;}
+.di:hover,.di.hi{background:var(--hover);color:var(--parchment-light);}
+.dcat{padding:5px 14px 4px;font-family:'Cinzel',serif;font-size:8px;letter-spacing:2px;color:var(--gold-dim);background:rgba(20,14,4,.9);border-bottom:1px solid var(--border);text-transform:uppercase;position:sticky;top:0;z-index:1;}
+.di-sub{padding-left:20px;}
+
+/* ─── FILTER BAR ─── */
+.fbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;align-items:flex-end;}
+.fbar .fi{min-width:180px;flex:2;max-width:320px;}
+.fbar .csw{min-width:140px;flex:1;max-width:210px;}
+
+/* ─── TABLE ─── */
+.lmeta{font-family:'Cinzel',serif;font-size:12px;letter-spacing:1px;color:var(--ink-faint);margin-bottom:12px;}
+.lmeta b{color:var(--gold-bright);font-weight:normal;}
+.tw{overflow-x:auto;border:1px solid var(--border);border-radius:2px;}
+table{width:100%;border-collapse:collapse;min-width:560px;font-size:clamp(10px,1.1vw,13px);}
+th{font-family:'Cinzel',serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--parchment-light);padding:10px 12px;text-align:left;white-space:nowrap;border-bottom:1px solid var(--border-bright);background:rgba(14,10,3,.9);}
+td{padding:12px 14px;border-bottom:1px solid rgba(74,52,12,.6);color:var(--ink);font-size:14px;vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(212,160,23,.03);color:var(--ink);}
+.bn{display:inline-block;border-radius:2px;padding:3px 9px;font-family:'Cinzel',serif;font-size:11px;letter-spacing:.5px;background:rgba(140,28,28,.15);border:1px solid rgba(140,28,28,.3);color:#dd7070;}
+.bi{display:inline-block;border-radius:2px;padding:3px 9px;background:rgba(212,160,23,.07);border:1px solid rgba(212,160,23,.2);color:var(--parchment);font-family:'IM Fell English',serif;font-size:14px;}
+.bts{display:inline-block;border-radius:2px;padding:3px 9px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;background:rgba(80,30,30,.25);border:1px solid rgba(120,45,45,.3);color:#bb8080;}
+.btb{display:inline-block;border-radius:2px;padding:3px 9px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;background:rgba(30,70,30,.25);border:1px solid rgba(45,100,45,.3);color:#80bb80;}
+.duc{font-family:'Cinzel',serif;font-size:14px;color:var(--gold-bright);}
+.duc-t{font-size:15px;}
+.datec{font-family:'Cinzel',serif;font-size:11px;color:var(--ink-faint);white-space:nowrap;}
+
+/* ─── TOTAL PREVIEW ─── */
+.tprev{margin-top:14px;padding:11px 16px;background:rgba(212,160,23,.04);border:1px solid rgba(212,160,23,.14);border-radius:2px;font-family:'Cinzel',serif;font-size:12px;letter-spacing:.5px;}
+.tprev-v{color:var(--gold-bright);font-size:16px;}
+.tprev-d{margin-left:14px;color:var(--ink-faint);}
+
+/* ─── BUTTONS ─── */
+.btn-p{font-family:'Cinzel',serif;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;border:1px solid var(--border-bright);border-radius:2px;background:linear-gradient(180deg,#9a7408,#705206);color:#eedca0;padding:10px 24px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,210,80,.1);transition:all .2s;}
+.btn-p:hover{background:linear-gradient(180deg,#ba8c0c,#8a6408);box-shadow:0 4px 18px rgba(0,0,0,.5),0 0 18px rgba(160,110,0,.12);transform:translateY(-1px);}
+.btn-del{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;text-transform:uppercase;background:transparent;color:#884040;border:1px solid rgba(70,18,18,.6);padding:4px 8px;cursor:pointer;border-radius:2px;transition:all .2s;}
+.btn-del:hover{background:rgba(100,22,22,.2);border-color:#7a2020;color:#cc6666;}
+.btn-sm{font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;text-transform:uppercase;background:rgba(14,10,4,.8);border:1px solid var(--border);border-radius:2px;color:var(--ink-faint);padding:5px 10px;cursor:pointer;transition:all .2s;}
+.btn-sm:hover{border-color:var(--border-bright);color:var(--parchment);}
+
+/* ─── STAT GRID ─── */
+.sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:11px;margin-bottom:22px;}
+.sc{background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:14px;text-align:center;}
+.sv{font-family:'Cinzel Decorative',serif;font-size:24px;color:var(--gold-bright);text-shadow:0 0 14px rgba(212,160,23,.22);line-height:1;;font-variant-numeric:lining-nums;font-feature-settings:'lnum' 1;}
+.sk{font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--parchment);margin-top:5px;}
+
+/* ─── CHARTS ─── */
+.cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(290px,1fr));gap:14px;}
+.cc{background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:18px;}
+.ct{font-family:'Cinzel',serif;font-size:11px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:14px;}
+
+/* ─── STATS SIDEBAR ─── */
+#stats-sidebar::-webkit-scrollbar,#nations-sidebar::-webkit-scrollbar{width:4px;}
+.item-chip{display:inline-block;padding:4px 10px;border-radius:20px;border:1px solid var(--border);font-family:'IM Fell English',serif;font-size:12px;color:var(--ink-faint);cursor:pointer;transition:all .15s;user-select:none;}
+.item-chip:hover{border-color:var(--gold-dim);color:var(--parchment);}
+.item-chip-on{border-color:var(--gold)!important;color:var(--gold)!important;background:rgba(212,160,23,.08);}
+
+.chip-list-wrap{max-height:130px;overflow-y:auto;padding-right:2px;}
+.chip-list-wrap::-webkit-scrollbar{width:3px;}
+.chip-list-wrap::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:2px;}
+.filter-active-bar{display:none;align-items:center;gap:6px;background:rgba(212,160,23,.08);border:1px solid rgba(212,160,23,.3);border-radius:3px;padding:4px 8px;margin-top:6px;font-family:'Cinzel',serif;font-size:8px;letter-spacing:1px;color:var(--gold-dim);}
+.filter-active-bar.on{display:flex;}
+.filter-active-bar button{background:none;border:none;color:var(--gold);cursor:pointer;font-size:10px;padding:0 2px;margin-left:auto;opacity:.7;}
+.filter-active-bar button:hover{opacity:1;}
+.fab-dot{width:5px;height:5px;border-radius:50%;background:var(--gold);flex-shrink:0;}
+.lmeta-filter{display:inline-flex;align-items:center;gap:5px;background:rgba(212,160,23,.1);border:1px solid rgba(212,160,23,.3);border-radius:12px;padding:2px 8px;font-size:9px;color:var(--gold-dim);cursor:pointer;transition:background .15s;margin-left:8px;vertical-align:middle;}
+.lmeta-filter:hover{background:rgba(212,160,23,.2);}#stats-sidebar::-webkit-scrollbar{width:4px;}
+#stats-sidebar::-webkit-scrollbar-track{background:transparent;}
+#stats-sidebar::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:2px;}
+.stats-item-check{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:3px;cursor:pointer;transition:background .15s;}
+.stats-item-check:hover{background:rgba(212,160,23,.1);}
+.stats-item-check input{accent-color:var(--gold);cursor:pointer;flex-shrink:0;}
+.stats-item-check span{font-family:'IM Fell English',serif;font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.plookup-card{background:rgba(20,14,4,.85)!important;border:1px solid var(--border);border-radius:4px;padding:10px 12px;margin-bottom:8px;-webkit-tap-highlight-color:transparent;}
+.plookup-name{font-family:Cinzel,serif;font-size:13px;color:var(--gold);margin-bottom:6px;}
+.plookup-row{display:flex;justify-content:space-between;font-size:12px;color:var(--parchment);margin-bottom:2px;}
+.plookup-label{color:var(--ink-faint);font-size:11px;letter-spacing:1px;}
+/* ─── MOBILE RESPONSIVE ─── */
+@media(max-width:600px){
+  .hdr{padding:10px 12px;flex-wrap:wrap;gap:8px;}
+  .hdr-left h1{font-size:18px;}
+  .hdr-right{gap:6px;flex-wrap:wrap;}
+  .btn-header{font-size:9px;padding:5px 8px;letter-spacing:1px;}
+  .join-code-badge{display:none!important;}
+  .tab-bar{gap:2px;padding:0 4px;}
+  .tb{font-size:9px;padding:10px 6px;letter-spacing:1px;}
+  .panel{padding:10px 8px 60px;}
+  .tw{overflow-x:auto;}
+  table{font-size:12px;}
+  .card{padding:12px 10px;}
+  .fg{grid-template-columns:1fr;}
+  .user-name{display:none;}
+  .hdeck,.hrule{display:none;}
+  .role-badge{font-size:8px;padding:2px 6px;}
+  #stats-sidebar{width:160px;}
+  #item-detail-charts-row{grid-template-columns:1fr!important;}
+}
+@media(max-width:860px){
+  .fbar{flex-wrap:wrap;}
+  .fbar .fi{min-width:120px;}
+  .fbar .csw{min-width:100px;}
+  #hdr-org-title{display:none!important;}
+}
+@media(min-width:1400px){
+  .panel{padding:22px 32px 80px;}
+}
+@media(max-width:400px){
+  .tb{font-size:7px;padding:8px 4px;}
+  .btn-header{display:none;}
+  #my-orgs-btn,#join-another-btn{display:flex!important;}
+}
+/* ─── NATIONS DOSSIER ─── */
+.nc{background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:16px 20px;margin-bottom:10px;display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;justify-content:space-between;transition:border-color .2s;}
+.nc:hover{border-color:var(--border-bright);}
+.nseal{width:42px;height:42px;flex-shrink:0;background:radial-gradient(circle at 38% 35%,#c43030,#700a0a);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 2px 10px rgba(0,0,0,.55),0 0 0 1px rgba(180,40,40,.2);}
+.nn{font-family:'Cinzel Decorative',serif;font-size:17px;color:var(--gold-bright);;transition:color .15s;}
+.nn:hover{color:var(--gold);}
+.nn-off{opacity:.4;text-decoration:line-through;}
+.ntags{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px;}
+.ntag{font-family:'IM Fell English',serif;font-size:10px;color:var(--ink-faint);background:rgba(50,34,8,.5);padding:1px 7px;border-radius:2px;cursor:pointer;transition:all .15s;user-select:none;}
+.ntag:hover{border-color:var(--gold-dim);color:var(--parchment);background:rgba(80,54,10,.7);}
+.ntag-off{opacity:.35;text-decoration:line-through;background:rgba(20,12,2,.5)!important;}
+.nm{display:flex;gap:16px;flex-wrap:wrap;align-items:center;}
+.ms{text-align:center;}
+.mv{font-family:'Cinzel',serif;font-size:13px;color:var(--gold-bright);}
+.mk{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:var(--ink-dim);text-transform:uppercase;}
+
+/* ─── ADMIN CONSOLE ─── */
+.admin-banner{
+  display:flex;align-items:center;gap:14px;
+  background:rgba(80,10,10,.2);border:1px solid rgba(120,20,20,.4);
+  border-radius:2px;padding:12px 18px;margin-bottom:20px;
+}
+.admin-banner .icon{font-size:20px;}
+.admin-banner-text .t{font-family:'Cinzel Decorative',serif;font-size:12px;color:#cc6060;letter-spacing:1px;}
+.admin-banner-text .s{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--ink-faint);text-transform:uppercase;margin-top:2px;}
+.admin-org-card{
+  background:var(--paper);border:1px solid var(--border);border-radius:2px;
+  margin-bottom:12px;overflow:hidden;
+}
+.admin-org-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 18px;cursor:pointer;transition:background .15s;
+}
+.admin-org-header:hover{background:rgba(212,160,23,.04);}
+.admin-org-name{font-family:'Cinzel Decorative',serif;font-size:13px;color:var(--parchment-light);}
+.admin-org-meta{font-family:'Cinzel',serif;font-size:9px;letter-spacing:1px;color:var(--ink-faint);}
+.admin-org-body{display:none;border-top:1px solid var(--border);padding:14px 18px;}
+.admin-org-body.open{display:block;}
+
+/* ─── EMPTY / LOADING ─── */
+.empty{text-align:center;padding:56px 20px;color:var(--ink-faint);}
+.empty .icon{font-size:44px;opacity:.22;display:block;margin-bottom:12px;}
+.empty p{font-family:'Cinzel',serif;font-size:10px;letter-spacing:2px;}
+.loading{text-align:center;padding:40px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:3px;color:var(--ink-faint);}
+
+/* ─── TOAST ─── */
+.toast{position:fixed;bottom:24px;right:24px;background:#110d05;border:1px solid var(--border-bright);padding:12px 22px;font-family:'Cinzel',serif;font-size:10px;letter-spacing:1px;color:var(--gold-bright);border-radius:3px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,.75);animation:tIn .22s ease;max-width:320px;}
+.toast::before{content:'✦ ';opacity:.55;}
+.toast.err{color:#cc6060;border-color:rgba(120,30,30,.6);}
+@keyframes tIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+
+/* ─── NUMBER SPINNERS ─── */
+input[type=number]{-moz-appearance:textfield!important;appearance:textfield!important;padding-right:26px!important;}
+input[type=number]::-webkit-outer-spin-button,
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none!important;appearance:none!important;display:none!important;margin:0!important;opacity:0!important;width:0!important;}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:#080503;}
+::-webkit-scrollbar-thumb{background:var(--border-bright);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--gold-dim);}
+
+/* ─── READONLY LOCK ─── */
+.readonly-lock{opacity:.4;pointer-events:none;}
+.readonly-notice{font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;color:var(--ink-faint);text-transform:uppercase;text-align:center;padding:20px;border:1px dashed rgba(58,40,8,.5);border-radius:2px;margin-bottom:16px;}
+
+@media(max-width:580px){
+  .hdr{flex-direction:column;align-items:flex-start;}
+  .fg{grid-template-columns:1fr 1fr;}
+  .panel{padding:14px 10px 70px;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ AUTH OVERLAY ══════════════ -->
+<div id="auth-overlay" class="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-seal">⚜</div>
+    <div class="auth-title">Mvndicraft</div>
+    <div class="auth-sub">Trade Ledger</div>
+    <span class="auth-rule">✦ ✦ ✦</span>
+    <div class="auth-desc">Official commerce record of the realm.<br>Sign in to access your ledger.</div>
+    <button class="btn-google" onclick="signInWithGoogle()">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="G"/>
+      Sign in with Google
+    </button>
+    <div class="auth-footer">Your data is stored securely and only visible to your Nation or Organization.</div>
+  </div>
+</div>
+
+<!-- ══════════════ ORG SETUP OVERLAY ══════════════ -->
+<div id="org-overlay" class="org-overlay hidden">
+  <div class="org-box">
+    <div class="org-title">Welcome, Merchant</div>
+    <div class="org-sub">Join or establish a Nation or Organization to begin</div>
+
+    <!-- TOP ACTION BUTTONS -->
+    <div class="org-tabs" style="margin-bottom:0;">
+      <button class="org-tab on" id="otab-join-nation" onclick="orgSetupTab('join-nation')">🏰 Join Nation</button>
+      <button class="org-tab" id="otab-join-org" onclick="orgSetupTab('join-org')">⚙ Join Organization</button>
+      <button class="org-tab" id="otab-create" onclick="orgSetupTab('create')">✦ Establish New</button>
+    </div>
+
+    <!-- JOIN NATION -->
+    <div class="org-card on" id="oc-join-nation">
+      <div style="font-family:Cinzel,serif;font-size:9px;letter-spacing:2px;color:var(--gold-dim);text-transform:uppercase;margin-bottom:10px;">Join an existing Nation</div>
+      <div class="fgrp" style="margin-bottom:14px;">
+        <label>Nation Join Code</label>
+        <input class="fi" id="join-code-input" placeholder="Enter 6-character code…" maxlength="6" autocomplete="off"
+          style="letter-spacing:5px;font-size:20px;text-transform:uppercase;text-align:center;"/>
+      </div>
+      <div style="font-family:Cinzel,serif;font-size:9px;letter-spacing:2px;color:var(--ink-faint);text-transform:uppercase;margin-bottom:16px;">
+        Ask your Nation Leader to share the Join Code with you.
+      </div>
+      <button class="btn-p" style="width:100%" onclick="joinOrg('nation')">🏰 &nbsp;Join Nation</button>
+    </div>
+
+    <!-- JOIN ORGANIZATION -->
+    <div class="org-card" id="oc-join-org">
+      <div style="font-family:Cinzel,serif;font-size:9px;letter-spacing:2px;color:var(--gold-dim);text-transform:uppercase;margin-bottom:10px;">Join an existing Organization</div>
+      <div class="fgrp" style="margin-bottom:14px;">
+        <label>Organization Join Code</label>
+        <input class="fi" id="join-code-input-org" placeholder="Enter 6-character code…" maxlength="6" autocomplete="off"
+          style="letter-spacing:5px;font-size:20px;text-transform:uppercase;text-align:center;"/>
+      </div>
+      <div style="font-family:Cinzel,serif;font-size:9px;letter-spacing:2px;color:var(--ink-faint);text-transform:uppercase;margin-bottom:16px;">
+        Ask your Organization Leader to share the Join Code with you.
+      </div>
+      <button class="btn-p" style="width:100%" onclick="joinOrg('organization')">⚙ &nbsp;Join Organization</button>
+    </div>
+
+    <!-- CREATE CARD -->
+    <div class="org-card" id="oc-create">
+      <div class="org-type-row">
+        <button class="org-type-btn on" id="otype-nation" onclick="setOrgType('nation')">🏰 Nation</button>
+        <button class="org-type-btn" id="otype-organization" onclick="setOrgType('organization')">⚙ Organization</button>
+      </div>
+      <div class="fgrp" style="margin-bottom:16px;">
+        <label id="org-name-label">Nation Name</label>
+        <input class="fi" id="org-name-input" placeholder="Enter your nation's name…" autocomplete="off"/>
+      </div>
+      <button class="btn-p" style="width:100%" onclick="createOrg()">⚜ &nbsp;Establish Nation</button>
+    </div>
+
+    <div style="margin-top:14px;font-family:Cinzel,serif;font-size:9px;letter-spacing:2px;color:var(--ink-faint);text-transform:uppercase;text-align:center;">
+      You can belong to multiple Nations and Organizations.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ ORG SWITCHER (returning users with multiple orgs) ══════════════ -->
+<div id="org-switcher" class="org-overlay hidden">
+  <div class="org-box" style="max-width:480px;">
+    <div class="org-title">Your Organizations</div>
+    <div class="org-sub">Select which Nation or Organization to enter, or join/create a new one</div>
+    <div id="switcher-list" style="margin:18px 0;"></div>
+    <div style="border-top:1px solid var(--border);padding-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn-p" style="flex:1;" onclick="showJoinFromSwitcher()">⚔ Join Another</button>
+      <button class="btn-p" style="flex:1;background:rgba(60,40,10,.6);" onclick="showCreateFromSwitcher()">🏰 Establish New</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MAIN APP ══════════════ -->
+<div id="app" class="hidden">
+
+<div class="page-shell"><div class="page-wrap"><header class="hdr">
+  <div class="hdr-left">
+    <div class="seal">⚜</div>
+    <div>
+      <h1>Mvndicraft</h1>
+      <div class="hdeck">Trade Ledger</div>
+      <span class="hrule">✦ ✦ ✦</span>
+    </div>
+  </div>
+  <!-- Center org title — flex spacer approach, no overlap -->
+  <div id="hdr-org-title" style="flex:1;text-align:center;pointer-events:none;display:none;min-width:0;overflow:hidden;">
+    <div style="font-family:'Cinzel Decorative',serif;font-size:clamp(9px,1vw,13px);color:var(--gold);letter-spacing:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" id="hdr-org-name-center"></div>
+    <div style="font-size:9px;color:var(--ink-faint);letter-spacing:3px;text-transform:uppercase;margin-top:2px;" id="hdr-org-type-center"></div>
+  </div>
+  <div class="hdr-right">
+    <!-- Join Code (hidden for moderators with no org) -->
+    <div class="join-code-badge" id="join-code-badge" title="Share this code to invite members" onclick="copyJoinCode()">
+      <span class="jcl" id="join-code-org-name">Join Code</span>
+      <span class="jcv" id="join-code-value">——————</span>
+    </div>
+    <!-- User chip -->
+    <div class="user-chip" id="user-chip">
+      <img class="user-avatar" id="user-avatar" src="" alt=""/>
+      <div>
+        <div class="user-name" id="user-name-display">—</div>
+        <div class="role-badge" id="role-badge"></div>
+      </div>
+    </div>
+    <!-- Download / Update button -->
+    <button class="btn-header" id="my-orgs-btn" onclick="goToSwitcher()" title="View your Nations &amp; Organizations">🏰 My Nations &amp; Orgs</button>
+    <button class="btn-header" id="dl-btn" onclick="openGitHub()">⬇ Download App</button>
+    <button class="btn-header btn-signout" onclick="doSignOut()">⇥ Sign Out</button>
+  </div>
+</header>
+
+<nav class="tabs" id="main-tabs">
+  <button class="tb on"  onclick="switchTab('ledger')">📜 Ledger</button>
+  <button class="tb"     onclick="switchTab('new')" id="tab-btn-new">✍ New Trade</button>
+  <button class="tb"     onclick="switchTab('stats')">📊 Statistics</button>
+  <button class="tb"     onclick="switchTab('nations')">🏰 Nations</button>
+  <button class="tb hidden" onclick="switchTab('members')" id="tab-btn-members">👥 Members</button>
+  <button class="tb hidden" onclick="switchTab('admin')" id="tab-btn-admin">🔐 Admin Console</button>
+</nav>
+
+<main class="panel">
+
+  <!-- ─── LEDGER ─── -->
+  <section id="tab-ledger">
+    <div class="fbar">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input class="fi" id="l-search" placeholder="🔍  Search items, nations, notes…" oninput="renderLedger()" style="flex:1;min-width:180px;"/>
+        <button class="btn-header" onclick="exportCSV()" title="Download ledger as spreadsheet" style="white-space:nowrap;">📥 Export CSV</button>
+      </div>
+      <div class="csw" id="csw-fn">
+        <button class="csb ph" id="csb-fn" onclick="toggleDrop('drop-fn','csb-fn')">
+          <span class="csb-label">All Nations</span><span class="arr">▾</span>
+        </button>
+        <div class="drop hidden" id="drop-fn"></div>
+      </div>
+      <div class="csw">
+        <button class="csb" id="csb-ft" onclick="toggleDrop('drop-ft','csb-ft')">
+          <span class="csb-label" id="csb-ft-lbl">Buy &amp; Sell</span><span class="arr">▾</span>
+        </button>
+        <div class="drop hidden" id="drop-ft">
+          <div class="di hi" onclick="pickFilter('type','','Buy &amp; Sell','csb-ft-lbl','drop-ft','csb-ft')">All Types</div>
+          <div class="di"    onclick="pickFilter('type','sell','Selling','csb-ft-lbl','drop-ft','csb-ft')">Selling</div>
+          <div class="di"    onclick="pickFilter('type','buy','Buying','csb-ft-lbl','drop-ft','csb-ft')">Buying</div>
+        </div>
+      </div>
+      <div class="csw">
+        <button class="csb" id="csb-fs" onclick="toggleDrop('drop-fs','csb-fs')">
+          <span class="csb-label" id="csb-fs-lbl">Sort: Newest</span><span class="arr">▾</span>
+        </button>
+        <div class="drop hidden" id="drop-fs">
+          <div class="di hi" onclick="pickFilter('sort','date','Sort: Newest','csb-fs-lbl','drop-fs','csb-fs')">Newest First</div>
+          <div class="di"    onclick="pickFilter('sort','value','Sort: Value','csb-fs-lbl','drop-fs','csb-fs')">Highest Value</div>
+          <div class="di"    onclick="pickFilter('sort','nation','Sort: Nation','csb-fs-lbl','drop-fs','csb-fs')">Nation A–Z</div>
+        </div>
+      </div>
+    </div>
+    <div class="lmeta" id="lmeta"></div>
+    <div id="ledger-body"><div class="loading">Loading records…</div></div>
+  </section>
+
+  <!-- ─── NEW TRADE ─── -->
+  <section id="tab-new" class="hidden">
+    <div id="trade-readonly-notice" class="readonly-notice hidden">
+      ⚔ Viewers may observe the ledger but cannot record new trades. Contact your Nation Leader to request Merchant rank.
+    </div>
+    <div id="trade-form-wrap">
+      <div class="stitle">Record New Trade</div>
+      <div class="card">
+        <div class="fg">
+          <div class="fgrp">
+            <label>Nation / Trading Partner</label>
+            <input class="fi" id="f-nation" placeholder="Type or select a nation…" autocomplete="off"
+              oninput="showNationDrop()" onfocus="showNationDrop()"/>
+            <div class="drop hidden" id="drop-nation"></div>
+          </div>
+          <div class="fgrp">
+            <label>Item / Resource</label>
+            <input class="fi" id="f-item" placeholder="Search all items…" autocomplete="off"
+              oninput="showItemDrop();const _v=this.value.trim();checkLivestock(_v);checkSmith(_v);checkBrew(_v);" onfocus="showItemDrop()"/>
+            <div class="drop hidden" id="drop-item"></div>
+          </div>
+          <div class="fgrp">
+            <label>Trade Type</label>
+            <div class="csw">
+              <button class="csb" id="csb-type" onclick="toggleDrop('drop-type','csb-type')">
+                <span class="csb-label" id="csb-type-lbl">Selling</span><span class="arr">▾</span>
+              </button>
+              <div class="drop hidden" id="drop-type">
+                <div class="di hi" id="opt-sell" onclick="setFormType('sell')">Selling ↓</div>
+                <div class="di"    id="opt-buy"  onclick="setFormType('buy')">Buying ↑</div>
+              </div>
+            </div>
+          </div>
+          <div class="fgrp">
+            <label>Quantity</label>
+            <div style="display:flex;border:1px solid var(--border);border-radius:3px;overflow:hidden;background:var(--ink);">
+              <input class="fi" type="number" id="f-qty" min="1" placeholder="e.g. 64" oninput="calcPreview()"
+                style="flex:1;border:none;border-radius:0;margin:0;min-width:0;"/>
+              <div style="display:flex;flex-direction:column;width:22px;border-left:1px solid var(--border);flex-shrink:0;">
+                <button type="button" tabindex="-1" onclick="stepNum('f-qty',1)" style="flex:1;background:rgba(40,24,4,.8);border:none;border-bottom:1px solid var(--border);color:var(--gold);cursor:pointer;font-size:10px;line-height:1;padding:0;transition:background .15s;" onmouseover="this.style.background='rgba(212,160,23,.25)'" onmouseout="this.style.background='rgba(40,24,4,.8)'">▲</button>
+                <button type="button" tabindex="-1" onclick="stepNum('f-qty',-1)" style="flex:1;background:rgba(40,24,4,.8);border:none;color:var(--gold);cursor:pointer;font-size:10px;line-height:1;padding:0;transition:background .15s;" onmouseover="this.style.background='rgba(212,160,23,.25)'" onmouseout="this.style.background='rgba(40,24,4,.8)'">▼</button>
+              </div>
+            </div>
+          </div>
+          <div class="fgrp">
+            <label>Price per Unit (⚙ Ducats)</label>
+            <div style="display:flex;border:1px solid var(--border);border-radius:3px;overflow:hidden;background:var(--ink);">
+              <input class="fi" type="number" id="f-price" min="0" placeholder="e.g. 25" oninput="calcPreview()"
+                style="flex:1;border:none;border-radius:0;margin:0;min-width:0;"/>
+              <div style="display:flex;flex-direction:column;width:22px;border-left:1px solid var(--border);flex-shrink:0;">
+                <button type="button" tabindex="-1" onclick="stepNum('f-price',1)" style="flex:1;background:rgba(40,24,4,.8);border:none;border-bottom:1px solid var(--border);color:var(--gold);cursor:pointer;font-size:10px;line-height:1;padding:0;transition:background .15s;" onmouseover="this.style.background='rgba(212,160,23,.25)'" onmouseout="this.style.background='rgba(40,24,4,.8)'">▲</button>
+                <button type="button" tabindex="-1" onclick="stepNum('f-price',-1)" style="flex:1;background:rgba(40,24,4,.8);border:none;color:var(--gold);cursor:pointer;font-size:10px;line-height:1;padding:0;transition:background .15s;" onmouseover="this.style.background='rgba(212,160,23,.25)'" onmouseout="this.style.background='rgba(40,24,4,.8)'">▼</button>
+              </div>
+            </div>
+          </div>
+          <div class="fgrp">
+            <label>Date</label>
+            <input class="fi" type="date" id="f-date"/>
+          </div>
+        </div>
+
+        <div id="livestock-panel" class="hidden" style="border:1px solid var(--border-bright);border-radius:3px;padding:14px 16px;margin:8px 0;background:rgba(30,18,4,.45);">
+          <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:12px;">🐴 Livestock Details</div>
+          <div class="fg" id="livestock-fields"></div>
+        </div>
+        <div id="smith-panel" class="hidden" style="border:1px solid var(--border-bright);border-radius:3px;padding:14px 16px;margin:8px 0;background:rgba(4,18,4,.35);">
+          <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:12px;">⚒ Smith Quality</div>
+          <div class="fg" id="smith-fields"></div>
+        </div>
+        <div id="brew-panel" class="hidden" style="border:1px solid var(--border-bright);border-radius:3px;padding:14px 16px;margin:8px 0;background:rgba(4,4,22,.45);">
+          <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:3px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:12px;">🍺 Brew Details</div>
+          <div class="fg" id="brew-fields"></div>
+        </div>
+
+        <div class="tprev hidden" id="tprev">
+          Total Value: <span class="tprev-v" id="tprev-v"></span>
+          <span class="tprev-d" id="tprev-d"></span>
+        </div>
+        <div class="fgrp" style="margin-top:13px;">
+          <label>Notes (optional)</label>
+          <textarea class="fi" id="f-notes" placeholder="Trade conditions, delivery terms, diplomatic notes…"></textarea>
+        </div>
+        <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+          <button class="btn-p" onclick="saveTrade()">⚜ &nbsp;Record Trade</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── STATS ─── -->
+  <section id="tab-stats" class="hidden" style="padding:0;">
+    <div style="display:flex;gap:0;min-height:600px;">
+
+      <!-- LEFT SIDEBAR: product filter -->
+      <div id="stats-sidebar" style="width:clamp(160px,18vw,220px);flex-shrink:0;border-right:1px solid var(--border-bright);background:rgba(20,12,4,.7);padding:14px 10px;overflow-y:auto;max-height:calc(100vh - 60px);position:sticky;top:0;">
+        <div style="font-family:Cinzel,serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">Filter Items</div>
+        <input class="fi" id="stats-search" placeholder="🔍 Search items…" oninput="filterStatsItems()" style="margin-bottom:8px;font-size:11px;padding:6px 8px;"/>
+        <div style="display:flex;gap:4px;margin-bottom:8px;">
+          <button class="btn-p" style="flex:1;font-size:9px;padding:4px 6px;" onclick="selectAllStatsItems()">All</button>
+          <button class="btn-header" style="flex:1;font-size:9px;padding:4px 6px;" onclick="if(_hiddenItems.size<_allStatsItems.length)clearAllStatsItems()">None</button>
+        </div>
+        <div class="chip-list-wrap"><div id="stats-item-list" style="display:flex;flex-direction:column;gap:3px;"></div></div>
+        <div id="fab-global" class="filter-active-bar"><span class="fab-dot"></span><span id="fab-global-text">FILTERED</span><button onclick="selectAllStatsItems()" title="Clear filter">✕</button></div>
+        <div style="border-top:1px solid var(--border);margin:12px 0 8px;"></div>
+        <div style="font-family:Cinzel,serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">Product Lookup</div>
+        <input class="fi" id="product-lookup-search" placeholder="🔍 Search product…" oninput="renderProductLookup()" style="margin-bottom:8px;font-size:11px;padding:6px 8px;"/>
+        <div id="product-lookup-results" style="font-size:10px;"></div>
+        <div style="border-top:1px solid var(--border);margin:12px 0 8px;"></div>
+        <div style="font-family:Cinzel,serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">Org Stats — Items</div>
+        <input class="fi" id="org-items-search" placeholder="🔍 Filter items…" oninput="filterOrgItems()" style="margin-bottom:6px;font-size:11px;padding:6px 8px;"/>
+        <div style="display:flex;gap:4px;margin-bottom:6px;">
+          <button class="btn-p" style="flex:1;font-size:9px;padding:3px 5px;" onclick="selectAllOrgItems()">All</button>
+          <button class="btn-header" style="flex:1;font-size:9px;padding:3px 5px;" onclick="clearAllOrgItems()">None</button>
+        </div>
+        <div class="chip-list-wrap"><div id="org-items-list" style="display:flex;flex-direction:column;gap:3px;margin-bottom:10px;"></div></div>
+        <div id="fab-org-items" class="filter-active-bar"><span class="fab-dot"></span><span id="fab-org-items-text">FILTERED</span><button onclick="selectAllOrgItems()" title="Clear filter">✕</button></div>
+        <div style="font-family:Cinzel,serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">Org Stats — Nations</div>
+        <input class="fi" id="org-nations-search" placeholder="🔍 Filter nations…" oninput="filterOrgNations()" style="margin-bottom:6px;font-size:11px;padding:6px 8px;"/>
+        <div style="display:flex;gap:4px;margin-bottom:6px;">
+          <button class="btn-p" style="flex:1;font-size:9px;padding:3px 5px;" onclick="selectAllOrgNations()">All</button>
+          <button class="btn-header" style="flex:1;font-size:9px;padding:3px 5px;" onclick="clearAllOrgNations()">None</button>
+        </div>
+        <div class="chip-list-wrap"><div id="org-nations-list" style="display:flex;flex-direction:column;gap:3px;"></div></div>
+        <div id="fab-org-nations" class="filter-active-bar"><span class="fab-dot"></span><span id="fab-org-nations-text">FILTERED</span><button onclick="selectAllOrgNations()" title="Clear filter">✕</button></div>
+      </div>
+
+      <!-- RIGHT: charts -->
+      <div style="flex:1;padding:clamp(10px,2vw,20px);overflow-x:hidden;min-width:0;">
+        <div id="global-graph-section">
+          <div class="stitle" style="margin-bottom:10px;">🌐 Global Market — All Realms</div>
+          <div id="global-graph-body"><div class="loading">Loading global data…</div></div>
+        </div>
+        <div style="border-top:1px solid var(--border);margin:22px 0 18px;"></div>
+        <div id="stats-body"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── NATIONS ─── -->
+  <section id="tab-nations" class="hidden" style="padding:0;">
+    <div style="display:flex;gap:0;min-height:500px;">
+      <!-- LEFT SIDEBAR -->
+      <div id="nations-sidebar" style="width:200px;flex-shrink:0;border-right:1px solid var(--border);background:rgba(20,12,4,.7);border-right:1px solid var(--border-bright);padding:14px 10px;overflow-y:auto;max-height:85vh;position:sticky;top:0;">
+        <div style="font-family:Cinzel,serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px;">Filter Nations</div>
+        <input class="fi" id="nations-search" placeholder="🔍 Search nations…" oninput="filterNationsList()" style="margin-bottom:8px;font-size:11px;padding:6px 8px;"/>
+        <div style="display:flex;gap:4px;margin-bottom:8px;">
+          <button class="btn-p" style="flex:1;font-size:9px;padding:4px 6px;" onclick="selectAllNations()">All</button>
+          <button class="btn-header" style="flex:1;font-size:9px;padding:4px 6px;" onclick="clearAllNations()">None</button>
+        </div>
+        <div class="chip-list-wrap"><div id="nations-item-list" style="display:flex;flex-direction:column;gap:3px;"></div></div>
+        <div id="fab-nations" class="filter-active-bar"><span class="fab-dot"></span><span id="fab-nations-text">FILTERED</span><button onclick="selectAllNations()" title="Clear filter">✕</button></div>
+        <div style="border-top:1px solid var(--border);margin:12px 0 8px;"></div>
+        <div style="font-family:Cinzel,serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:6px;">Sort By</div>
+        <select class="fi" id="nations-sort" onchange="renderNations()" style="font-size:11px;padding:5px 8px;margin-bottom:0;">
+          <option value="value">Total Value</option>
+          <option value="trades">Trade Count</option>
+          <option value="sold">Sold Value</option>
+          <option value="bought">Bought Value</option>
+          <option value="name">Name (A–Z)</option>
+          <option value="recent">Most Recent</option>
+        </select>
+      </div>
+      <!-- RIGHT: nation cards -->
+      <div style="flex:1;padding:16px 20px;overflow-x:hidden;">
+        <div class="stitle" style="margin-bottom:14px;">Known Nations &amp; Trading Partners</div>
+        <div id="nations-body"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ─── ADMIN CONSOLE (moderator only — completely hidden from others) ─── -->
+  <section id="tab-members" class="hidden">
+    <div class="admin-banner">
+      <span class="icon">👥</span>
+      <div class="admin-banner-text">
+        <div class="t">Member Management</div>
+        <div class="s">Manage roles, kick members, and manage the join blacklist</div>
+      </div>
+      <div style="display:flex;gap:8px;margin-left:auto;flex-shrink:0;">
+        <button class="btn-p" style="font-size:10px;padding:6px 12px;" onclick="copyInviteLink()" title="Copy shareable invite link">🔗 Invite Link</button>
+        <button class="btn-header" style="font-size:10px;padding:6px 12px;" onclick="openOrgBio()" title="Edit org description">📜 Edit Bio</button>
+      </div>
+    </div>
+    <div id="org-bio-display" style="display:none;background:rgba(20,14,4,.6);border:1px solid var(--border);border-radius:4px;padding:12px 16px;margin-bottom:14px;font-size:12px;font-style:italic;color:var(--parchment);line-height:1.6;"></div>
+    <div id="members-body"><div class="loading">Loading members…</div></div>
+    <div style="margin-top:28px;">
+      <div class="stitle">Join Blacklist</div>
+      <div class="card">
+        <div style="font-family:Cinzel,serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:12px;">Banned Emails — these players cannot join with the code</div>
+        <div id="blacklist-body"><div class="loading" style="padding:8px 0;">Loading…</div></div>
+        <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px;">
+          <div class="fg">
+            <div class="fgrp">
+              <label>Email to Ban</label>
+              <input class="fi" id="blacklist-email-input" placeholder="player@gmail.com"/>
+            </div>
+          </div>
+          <div style="margin-top:10px;">
+            <button class="btn-p" onclick="addToBlacklist()">🚫 &nbsp;Add to Blacklist</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="tab-admin" class="hidden">
+    <div class="admin-banner">
+      <span class="icon">🔐</span>
+      <div class="admin-banner-text">
+        <div class="t">Moderator Console</div>
+        <div class="s">Restricted Access · All Ledger Activity Visible Here</div>
+      </div>
+    </div>
+    <div id="admin-body"><div class="loading">Loading all organizations…</div></div>
+    <div style="margin-top:28px;">
+      <div class="stitle">Moderator Management</div>
+      <div class="card">
+        <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:12px;">Current Moderators</div>
+        <div id="mod-list"><div class="loading" style="padding:10px 0;">Loading…</div></div>
+        <div style="border-top:1px solid var(--border);margin-top:14px;padding-top:14px;">
+          <div style="font-family:'Cinzel',serif;font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--gold-dim);margin-bottom:10px;">Appoint New Moderator</div>
+          <div class="fg">
+            <div class="fgrp">
+              <label>Google Account Email</label>
+              <input class="fi" id="mod-email-input" placeholder="user@gmail.com"/>
+            </div>
+          </div>
+          <div style="margin-top:12px;">
+            <button class="btn-p" onclick="appointModerator()">⚜ &nbsp;Grant Moderator Rank</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+</div><!-- #app -->
+</div></div><!-- /page-wrap /page-shell -->
+
+<script defer>
+// ══════════════════════════════════════════
+// FIREBASE CONFIG
+// ══════════════════════════════════════════
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyB47XJ8mCD-whpsF9KyTLcadFjqU1-hROc",
+  authDomain: "mvndicraft-ledger.firebaseapp.com",
+  projectId: "mvndicraft-ledger",
+  storageBucket: "mvndicraft-ledger.firebasestorage.app",
+  messagingSenderId: "478391372784",
+  appId: "1:478391372784:web:b4a958fb0479c2e7112b35"
+};
+const GITHUB_RELEASES = "https://github.com/JohnyMilkBucket/MvndiCraft-Ledger/releases";
+const MODERATOR_EMAIL = "OPHacker303@gmail.com";
+
+// ══════════════════════════════════════════
+// INIT FIREBASE
+// ══════════════════════════════════════════
+firebase.initializeApp(FIREBASE_CONFIG);
+const auth = firebase.auth();
+const db   = firebase.firestore();
+
+// ══════════════════════════════════════════
+// ITEM DATABASE
+// ══════════════════════════════════════════
+const ITEMS = {
+  "⚙ Towny Resources": ["Coal","Stone Bricks","Terracotta","Sandstone","Diorite","Andesite","Glass","Raw Iron","Quartz Blocks","Raw Gold","Magnetite","Wheat","Cooked Beef","Raw Copper","Canister Shot","Cannonball","Boulder","Steel Bolt","Gunpowder Pouch"],
+  "🔩 Blacksmith Materials": ["Raw Iron","Iron Ingot","Bloom","Slag","Hot Cast Iron","Hot Steel","Steel Ingot","Cast Iron Ingot","Steel Wire","Hard Clay","Charcoal","Coal","Weapon Blade","Weapon Head","Armor Plate","Bellows","Tongs","Hammer","Anvil","Cauldron","Bloomery","Smithing Table"],
+  "⛏ Ores & Raw Resources": ["Raw Gold","Raw Copper","Magnetite","Coal Ore","Diamond","Emerald","Lapis Lazuli","Redstone Dust","Netherite Scrap","Quartz","Amethyst Shard","Nether Quartz"],
+  "🪨 Stone & Rock Types": ["Stone","Cobblestone","Stone Bricks","Mossy Stone Bricks","Cracked Stone Bricks","Chiseled Stone Bricks","Granite","Polished Granite","Diorite","Polished Diorite","Andesite","Polished Andesite","Calcite","Tuff","Deepslate","Cobbled Deepslate","Polished Deepslate","Deepslate Bricks","Deepslate Tiles","Chiseled Deepslate","Reinforced Deepslate","Basalt","Polished Basalt","Smooth Basalt","Blackstone","Polished Blackstone","Polished Blackstone Bricks","Chiseled Polished Blackstone","Netherrack","Nether Bricks","Red Nether Bricks","Cracked Nether Bricks","Chiseled Nether Bricks","End Stone","End Stone Bricks","Obsidian","Crying Obsidian","Sandstone","Red Sandstone","Smooth Sandstone","Chiseled Sandstone","Cut Sandstone","Smooth Red Sandstone","Chiseled Red Sandstone","Prismarine","Prismarine Bricks","Dark Prismarine","Mud Bricks","Packed Mud"],
+  "🧱 Walls & Fences": ["Cobblestone Wall","Mossy Cobblestone Wall","Stone Brick Wall","Granite Wall","Diorite Wall","Andesite Wall","Sandstone Wall","Red Sandstone Wall","Brick Wall","Prismarine Wall","End Stone Brick Wall","Nether Brick Wall","Red Nether Brick Wall","Blackstone Wall","Polished Blackstone Wall","Polished Blackstone Brick Wall","Deepslate Brick Wall","Deepslate Tile Wall","Cobbled Deepslate Wall","Mud Brick Wall","Oak Fence","Spruce Fence","Birch Fence","Dark Oak Fence","Acacia Fence","Jungle Fence","Mangrove Fence","Nether Brick Fence"],
+  "🏗 Building Blocks": ["Bricks","Quartz Block","Smooth Quartz","Quartz Pillar","Chiseled Quartz Block","Purpur Block","Purpur Pillar","Terracotta","White Terracotta","Orange Terracotta","Red Terracotta","Brown Terracotta","Gray Terracotta","Light Gray Terracotta","Blue Terracotta","Cyan Terracotta","Green Terracotta","Yellow Terracotta","Black Terracotta","Glass","Glass Pane","Tinted Glass","Hard Clay","Hay Bale","Packed Ice","Blue Ice","Snow Block"],
+  "🪵 Wood & Lumber": ["Oak Log","Spruce Log","Birch Log","Jungle Log","Acacia Log","Dark Oak Log","Mangrove Log","Cherry Log","Stripped Oak Log","Stripped Spruce Log","Stripped Dark Oak Log","Stripped Birch Log","Oak Planks","Spruce Planks","Birch Planks","Jungle Planks","Acacia Planks","Dark Oak Planks","Mangrove Planks","Cherry Planks","Oak Slab","Spruce Slab","Birch Slab","Dark Oak Slab","Thatch Stairs (Birch Stairs)","Stick","Charcoal"],
+  "🌾 Farming & Agriculture": ["Wheat","Wheat Seeds","Bread","Flour","Potato","Baked Potato","Carrot","Golden Carrot","Beetroot","Beetroot Seeds","Beetroot Soup","Pumpkin","Pumpkin Pie","Melon","Melon Slice","Sugar Cane","Sugar","Cocoa Beans","Cookie","Cake","Apple","Dried Kelp","Mushroom (Red)","Mushroom (Brown)","Mushroom Stew","Sweet Berries","Suspicious Stew","Chorus Fruit"],
+  "🍖 Animal Products & Food": ["Cooked Beef","Raw Beef","Cooked Pork","Raw Pork Chop","Cooked Chicken","Raw Chicken","Cooked Mutton","Raw Mutton","Raw Rabbit","Cooked Rabbit","Rabbit Stew","Cooked Cod","Raw Cod","Salmon","Cooked Salmon","Egg","Milk Bucket","Honey Bottle","Golden Apple","Leather","Wool","White Wool","Black Wool","Gray Wool","Brown Wool","Bone","Bone Meal","Rabbit Hide","Rabbit's Foot","Horse","Donkey","Mule"],
+  "🍺 Brewery (Drinks)": ["Whiskey","Brandy","Aqua Ardens","Khrenovukha","Amaretto","Aqua Vitae","Braggot","Bochet","Sherry","Port Wine","Honeyed Wine","Wormwood Wine","Tej","Bragawd","Bock Beer","Raisin Wine","Resinated Wine","Red Wine","Date Wine","Sparkling Wine","White Wine","Sugarcane Wine","Herbal Wine","Clairet","Apple Cider","Dark Beer","Klosterbier","Koyt Beer","Red Ale","Melomel","Medovukha","Airag","Wheat Beer","Wheatbeer","Ale","Grodziskie","Budweiser","Mead","Vinegar"],
+  "⚔ Swords & Blades": ["Shortsword","Longsword","Arming Sword","Greatsword","Zweihander","Claymore","Falchion","Flamberge","Estoc","Iron Dagger","Steel Dagger","Hunting Knife","Iron Sword","Steel Sword","Cast Iron Sword"],
+  "🪓 Axes, Maces & Clubs": ["Iron Axe","Steel Axe","Battle Axe","Francisca Axe (Throwing)","Dane Axe","Iron Mace","Steel Mace","War Hammer","Morning Star","Flail","Wooden Club","Great Maul"],
+  "🗡 Polearms & Spears": ["Spear","Winged Spear","Pike","Halberd","Glaive","Voulge","Bardiche","War Scythe","Lance","Quarterstaff"],
+  "🏹 Ranged Weapons & Ammo": ["Short Bow","Longbow","Crossbow","Arquebus","Standard Arrow","Bodkin Arrow","Standard Bolt","Bullet","Gunpowder","Gunpowder Pouch","String","Feather","Flint"],
+  "🛡 Armor & Shields": ["Leather Helmet","Leather Chestplate","Leather Leggings","Leather Boots","Gambeson","Padded Coif","Chainmail Helmet","Chainmail Chestplate","Chainmail Leggings","Chainmail Boots","Iron Helmet","Iron Chestplate","Iron Leggings","Iron Boots","Cast Iron Helmet","Cast Iron Chestplate","Cast Iron Leggings","Cast Iron Boots","Steel Helmet","Steel Chestplate","Steel Leggings","Steel Boots","Lamellar Armor","Plate Armor","Wooden Shield","Iron Shield","Steel Shield","Tower Shield","Shield"],
+  "⛵ Ships & Naval": ["Cog","Dromon","Drakkar","Galley","Rowboat","Ship Hull Planks","Ship Mast","Ship Sail","Ship Cannon","Naval Gunpowder","Iron Chain","Rope","Anchor","Ship Repair Kit"],
+  "💣 Siege Weapons & Ammo": ["Trebuchet","Ballista","Cannon","Greek Fire (Weapon)","Trebuchet Frame","Trebuchet Arm","Trebuchet Counterweight","Trebuchet Component","Ballista Frame","Ballista Bolt","Steel Bolt","Cannon Barrel","Cannonball","Canister Shot","Greek Fire Flask","Fire Bomb","Boulder","Gunpowder","Gunpowder Pouch","TNT"],
+  "🌿 Herbs & Spices": ["Rosemary","Sage","Thyme","Lavender","Wormwood","Hops","Sweet Berries","Nether Wart","Vine","Lily Pad","Cactus"],
+  "🎨 Dyes & Pigments": ["Red Dye","Blue Dye","Yellow Dye","Green Dye","Orange Dye","Purple Dye","Cyan Dye","White Dye","Black Dye","Brown Dye","Gray Dye","Light Gray Dye","Light Blue Dye","Lime Dye","Magenta Dye","Pink Dye","Ink Sac","Glow Ink Sac","Cocoa Beans","Lapis Lazuli","Bone Meal"],
+  "✨ Rare Materials": ["Glowstone Dust","Glowstone Block","Blaze Rod","Blaze Powder","Slimeball","Phantom Membrane","Spider Eye","Fermented Spider Eye","Nether Star","Dragon Breath","End Crystal"],
+  "🔧 Tools & Utilities": ["Iron Pickaxe","Steel Pickaxe","Iron Shovel","Iron Hoe","Flint and Steel","Compass","Map","Clock","Spyglass","Fishing Rod","Shears","Bucket","Water Bucket","Lantern","Soul Lantern","Torch","Book","Paper","Bear Trap","Spiked Barricade","Scaffolding","Saddle","Iron Horse Armor","Gold Horse Armor","Diamond Horse Armor"],
+  "🏴 Banners & Heraldry": ["White Banner","Orange Banner","Magenta Banner","Light Blue Banner","Yellow Banner","Lime Banner","Pink Banner","Gray Banner","Light Gray Banner","Cyan Banner","Purple Banner","Blue Banner","Brown Banner","Green Banner","Red Banner","Black Banner","Banner Pattern","Shield (Custom)"],
+  "💎 Valuables & Blocks": ["Diamond Block","Emerald Block","Gold Block","Iron Block","Lapis Block","Redstone Block","Coal Block","Netherite Block","Copper Block","Raw Iron Block","Raw Gold Block","Raw Copper Block","Amethyst Block"],
+  "🐗 Custom Mob Drops": ["Bear Pelt","Bear Meat","Bear Claw","Boar Tusk","Raw Boar Meat","Cooked Boar Meat","Boar Hide","Wolf Pelt","Wolf Fang","Bandit Coin Pouch","Bandit Sword","Bandit Equipment","Rat Tail","Rat Hide"],
+  "🏚 Farming Machines": ["Mill","Millstone","Windmill","Windmill Sail","Plough","Cart","Barrel","Brewing Stand","Composter","Beehive","Bee Nest"],
+};
+
+const CHART_C=['#d4a017','#8b2020','#4a7c59','#1a4a7c','#7c6a1a','#4a1a7c','#7c1a4a','#1a7c4a','#9e7020','#1a5a9e'];
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let currentUser     = null;
+let currentUserDoc  = null;
+let currentOrg      = null;
+let trades          = [];
+let tradingNations  = [];
+let fType='', fNation='', fSort='date', formType='sell';
+let cN=null,cI=null,cT=null,cTm=null,cP=null,cG=null;
+var _orgChartType = 'bar'; // Nations & Items charts
+var _orgNationData = [], _orgItemData = [], _orgMonths = [], _orgSV=0, _orgBV=0;
+let tradesUnsub     = null;
+let createOrgType   = 'nation';
+
+const IS_ELECTRON = (typeof window.electronAPI !== 'undefined' && window.electronAPI.isElectron);
+
+// ══════════════════════════════════════════
+// AUTH
+// ══════════════════════════════════════════
+function signInWithGoogle(){
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(e => toast('Sign-in failed: ' + e.message, true));
+  } catch(e) {
+    toast('Firebase not ready yet, please wait a moment and try again.', true);
+  }
+}
+function doSignOut(){
+  if(!confirm('Sign out of the Trade Ledger?')) return;
+  if(tradesUnsub) tradesUnsub();
+  auth.signOut();
+}
+async function goToSwitcher(){
+  if(tradesUnsub){ tradesUnsub(); tradesUnsub = null; }
+  var memberships = currentUserDoc.orgMemberships || [];
+  if(memberships.length > 0){
+    await showOrgSwitcher(memberships);
+  } else {
+    showScreen('org');
+  }
+}
+
+auth.onAuthStateChanged(async user => {
+  if(!user){
+    showScreen('auth');
+    return;
+  }
+  currentUser = user;
+  // Load or create user doc
+  const uRef = db.collection('users').doc(user.uid);
+  let uSnap = await uRef.get();
+  if(!uSnap.exists){
+    const data = {
+      email: user.email,
+      displayName: user.displayName || 'Unknown',
+      photoURL: user.photoURL || '',
+      role: 'viewer',
+      orgId: null,
+      orgType: null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    };
+    await uRef.set(data);
+    currentUserDoc = data;
+  } else {
+    currentUserDoc = uSnap.data();
+  }
+
+  // Check /moderators collection — this is what actually controls mod powers
+  // Both the HTML and the app read from the same Firestore collection in real time
+  const modSnap = await db.collection('moderators').doc(user.email).get();
+  currentUserDoc._isMod = modSnap.exists;
+
+  // If moderator has an org but wrong role, force-correct to leader
+  if(currentUserDoc._isMod && currentUserDoc.orgId && currentUserDoc.role !== 'leader'){
+    await uRef.update({ role: 'leader' });
+    currentUserDoc.role = 'leader';
+  }
+
+  updateHeaderUI();
+
+  // Moderator with no org: skip straight into app
+  if(currentUserDoc._isMod && !currentUserDoc.orgId){
+    await bootApp();
+    return;
+  }
+
+  if(!currentUserDoc.orgId){
+    showScreen('org');
+    return;
+  }
+
+  // Load memberships array (multi-org support)
+  var memberships = currentUserDoc.orgMemberships || [];
+
+  // Migrate legacy single-org users into memberships array on first load
+  if(memberships.length === 0 && currentUserDoc.orgId){
+    memberships = [{ orgId: currentUserDoc.orgId, role: currentUserDoc.role || 'viewer' }];
+    await uRef.update({ orgMemberships: memberships });
+    currentUserDoc.orgMemberships = memberships;
+  }
+
+  // No orgs at all — go to setup
+  if(memberships.length === 0){
+    showScreen('org');
+    return;
+  }
+
+  // Multiple orgs — show switcher modal
+  if(memberships.length > 1){
+    await showOrgSwitcher(memberships);
+    return;
+  }
+
+  // Single org — load it and boot
+  var oSnap = await db.collection('orgs').doc(memberships[0].orgId).get();
+  if(!oSnap.exists){
+    await uRef.update({ orgMemberships: [], orgId: null, orgType: null, role: 'viewer' });
+    currentUserDoc.orgMemberships = [];
+    showScreen('org');
+    return;
+  }
+  currentOrg = { id: oSnap.id, ...oSnap.data() };
+  currentUserDoc.orgId = currentOrg.id;
+  currentUserDoc.role = memberships[0].role;
+  await bootApp();
+});
+
+function updateHeaderUI(){
+  if(!currentUser || !currentUserDoc) return;
+  document.getElementById('user-avatar').src = currentUser.photoURL || '';
+  document.getElementById('user-name-display').textContent = currentUser.displayName || currentUser.email;
+  const rb = document.getElementById('role-badge');
+  const role = currentUserDoc.role;
+  const displayRole = role.charAt(0).toUpperCase() + role.slice(1);
+  if(currentUserDoc._isMod){
+    // Moderator who also has an org role: show "Leader ♛" in gold crown style
+    // Moderator with no org: show "Moderator ♛"
+    rb.textContent = (role && role !== 'viewer') ? displayRole + ' ♛' : 'Moderator ♛';
+    rb.className = 'role-badge role-moderator';
+  } else {
+    // Regular users: show their org role as-is, no crown
+    rb.textContent = displayRole;
+    rb.className = 'role-badge role-' + role;
+  }
+  // Update download/update button
+  document.getElementById('dl-btn').textContent = IS_ELECTRON ? '🔄 Update App' : '⬇ Download App';
+}
+
+async function bootApp(){
+  // Handle invite link join code
+  try {
+    var pendingCode = sessionStorage.getItem('pendingJoinCode');
+    if(pendingCode){
+      sessionStorage.removeItem('pendingJoinCode');
+      document.getElementById('join-code-input') && (document.getElementById('join-code-input').value = pendingCode);
+    }
+  } catch(e){}
+  showScreen('app');
+
+  // Seed the /moderators collection with the owner email if not already there
+  // This ensures the first-time setup works even before the admin console is used
+  if(currentUser.email === MODERATOR_EMAIL){
+    const seedSnap = await db.collection('moderators').doc(MODERATOR_EMAIL).get();
+    if(!seedSnap.exists){
+      await db.collection('moderators').doc(MODERATOR_EMAIL).set({
+        email: MODERATOR_EMAIL,
+        grantedBy: 'system',
+        grantedAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+  }
+
+  // Show/hide tabs based on role
+  const role = currentUserDoc.role;
+  const isMod = currentUserDoc._isMod === true;
+  const canTrade = ['merchant','leader','moderator'].includes(role);
+  document.getElementById('tab-btn-new').classList.toggle('hidden', role === 'viewer');
+  document.getElementById('tab-btn-members').classList.toggle('hidden', !(['leader'].includes(role) || isMod));
+  document.getElementById('tab-btn-admin').classList.toggle('hidden', !isMod);
+
+  // Join code
+  if(currentOrg){
+    document.getElementById('join-code-value').textContent = currentOrg.joinCode || '——————';
+    document.getElementById('join-code-org-name').textContent = (currentOrg.type === 'nation' ? '🏰 ' : '⚙ ') + (currentOrg.name || 'Join Code');
+    document.getElementById('join-code-badge').style.display = 'flex';
+    // Center header org title
+    var titleEl = document.getElementById('hdr-org-title');
+    var nameEl  = document.getElementById('hdr-org-name-center');
+    var typeEl  = document.getElementById('hdr-org-type-center');
+    if(titleEl && nameEl && typeEl){
+      nameEl.textContent = currentOrg.name || '';
+      typeEl.textContent = currentOrg.type === 'nation' ? '⚔ Nation' : '⚙ Organization';
+      titleEl.style.display = 'block';
+    }
+    renderOrgBio();
+  } else {
+    document.getElementById('join-code-badge').style.display = 'none';
+  }
+
+  // New Trade tab lock for viewers
+  const notice = document.getElementById('trade-readonly-notice');
+  const formWrap = document.getElementById('trade-form-wrap');
+  if(role === 'viewer'){
+    notice.classList.remove('hidden');
+    formWrap.classList.add('readonly-lock');
+  }
+
+  // Subscribe to trades
+  if(currentOrg){
+    subscribeToTrades(currentOrg.id);
+  }
+
+  // Load global graph
+  loadGlobalGraph();
+
+  // Subscribe to join notifications for leaders and mods
+  if((currentUserDoc.role === 'leader' || currentUserDoc._isMod) && currentOrg){
+    db.collection('orgs').doc(currentOrg.id).collection('notifications')
+      .where('read','==',false)
+      .onSnapshot(function(snap){
+        snap.docChanges().forEach(function(change){
+          if(change.type === 'added'){
+            var data = change.doc.data();
+            if(data.type === 'join'){
+              showNotificationBanner('👋 ' + esc(data.userName) + ' has joined your ' + (currentOrg.type||'org') + '!');
+              // Mark as read
+              change.doc.ref.update({ read: true });
+            }
+          }
+        });
+      });
+  }
+
+  // If moderator, load admin console data
+  if(isMod){
+    loadAdminConsole();
+    switchTab('ledger');
+  } else {
+    switchTab('ledger');
+  }
+
+  initForm();
+}
+
+// ══════════════════════════════════════════
+// SCREEN SWITCHER
+// ══════════════════════════════════════════
+function showScreen(which){
+  document.getElementById('auth-overlay').style.display = which === 'auth' ? 'flex' : 'none';
+  document.getElementById('org-overlay').classList.toggle('hidden', which !== 'org');
+  document.getElementById('org-switcher').classList.toggle('hidden', which !== 'switcher');
+  document.getElementById('app').classList.toggle('hidden', which !== 'app');
+}
+function showOrgSetup(){
+  showScreen('org');
+  orgSetupTab('join-nation');
+}
+function showCreateFromSwitcher(){
+  showScreen('org');
+  orgSetupTab('create');
+}
+// Called from switcher's "Join Another" button
+function goJoinAnother(){ showOrgSetup(); }
+function showJoinFromSwitcher(){
+  showScreen('org');
+  orgSetupTab('join-nation');
+}
+
+// ══════════════════════════════════════════
+// ORG SETUP
+// ══════════════════════════════════════════
+function orgSetupTab(which){
+  var tabs = ['join-nation','join-org','create'];
+  tabs.forEach(function(t){
+    var btn = document.getElementById('otab-'+t);
+    var card = document.getElementById('oc-'+t);
+    if(btn) btn.classList.toggle('on', t === which);
+    if(card) card.classList.toggle('on', t === which);
+  });
+}
+function setOrgType(t){
+  createOrgType = t;
+  document.getElementById('otype-nation').classList.toggle('on', t==='nation');
+  document.getElementById('otype-organization').classList.toggle('on', t==='organization');
+  document.getElementById('org-name-label').textContent = t==='nation' ? 'Nation Name' : 'Organization Name';
+  document.querySelector('#oc-create .btn-p').textContent = '⚜   Establish ' + (t==='nation'?'Nation':'Organization');
+}
+async function showOrgSwitcher(memberships){
+  showScreen('switcher');
+  var list = document.getElementById('switcher-list');
+  list.innerHTML = '<div class="loading">Loading your organizations…</div>';
+  try {
+    var rows = '';
+    for(var i=0; i<memberships.length; i++){
+      var m = memberships[i];
+      var snap = await db.collection('orgs').doc(m.orgId).get();
+      if(!snap.exists) continue;
+      var org = snap.data();
+      var typeIcon = org.type === 'nation' ? '🏰' : '⚙';
+      var roleLabel = (m.role||'viewer').charAt(0).toUpperCase()+(m.role||'viewer').slice(1);
+      rows += '<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:rgba(30,18,4,.5);border:1px solid var(--border);border-radius:4px;margin-bottom:8px;">'
+            + '<div>'
+            +   '<div style="font-family:Cinzel,serif;font-size:13px;color:var(--gold-bright);">'+typeIcon+' '+esc(org.name)+'</div>'
+            +   '<div style="font-size:9px;color:var(--ink-faint);letter-spacing:1px;text-transform:uppercase;margin-top:3px;">'+org.type+' · '+roleLabel+'</div>'
+            + '</div>'
+            + '<div style="display:flex;gap:8px;align-items:center;">'
+            +   '<button class="btn-p" style="padding:6px 14px;font-size:10px;" onclick="selectOrg(this.dataset.oid)" data-oid="'+m.orgId+'">Enter</button>'
+            +   '<button class="btn-del" style="padding:6px 10px;font-size:11px;" onclick="leaveOrgFromSwitcher(this.dataset.oid,this.dataset.name)" data-oid="'+m.orgId+'" data-name="'+esc(org.name)+'" title="Leave">✕</button>'
+            + '</div>'
+            + '</div>';
+    }
+    list.innerHTML = rows || '<div style="color:var(--ink-faint);font-size:12px;">No active organizations found.</div>';
+  } catch(e){ list.innerHTML = '<div style="color:#cc6060;font-size:11px;">Error: '+esc(e.message)+'</div>'; }
+}
+
+async function selectOrg(orgId){
+  try {
+    var oSnap = await db.collection('orgs').doc(orgId).get();
+    if(!oSnap.exists){ toast('Organization not found.', true); return; }
+    currentOrg = { id: oSnap.id, ...oSnap.data() };
+    // Find role in memberships
+    var memberships = currentUserDoc.orgMemberships || [];
+    var m = memberships.find(function(x){ return x.orgId === orgId; });
+    var role = m ? m.role : 'viewer';
+    currentUserDoc.orgId = orgId;
+    currentUserDoc.orgType = currentOrg.type;
+    currentUserDoc.role = role;
+    await db.collection('users').doc(currentUser.uid).update({ orgId: orgId, orgType: currentOrg.type, role: role });
+    await bootApp();
+  } catch(e){ toast('Error: '+e.message, true); }
+}
+
+async function leaveOrgFromSwitcher(orgId, orgName){
+  if(!confirm('Leave '+orgName+'? You will need the join code to rejoin.')) return;
+  try {
+    var memberships = (currentUserDoc.orgMemberships||[]).filter(function(m){ return m.orgId !== orgId; });
+    await db.collection('users').doc(currentUser.uid).update({ orgMemberships: memberships });
+    await db.collection('orgs').doc(orgId).update({ memberCount: firebase.firestore.FieldValue.increment(-1) });
+    currentUserDoc.orgMemberships = memberships;
+    toast('Left '+orgName+'.');
+    if(memberships.length === 0){
+      currentUserDoc.orgId = null; currentUserDoc.role = 'viewer';
+      await db.collection('users').doc(currentUser.uid).update({ orgId: null, role: 'viewer' });
+      showScreen('org');
+    } else if(memberships.length === 1){
+      await selectOrg(memberships[0].orgId);
+    } else {
+      await showOrgSwitcher(memberships);
+    }
+  } catch(e){ toast('Error: '+e.message, true); }
+}
+
+async function createOrg(){
+  const name = document.getElementById('org-name-input').value.trim();
+  if(!name){ toast('Please enter a name.', true); return; }
+  const joinCode = generateJoinCode();
+  try {
+    const orgRef = await db.collection('orgs').add({
+      name,
+      type: createOrgType,
+      leaderId: currentUser.uid,
+      joinCode,
+      memberCount: 1,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    var newMembership = { orgId: orgRef.id, role: 'leader' };
+    var memberships = (currentUserDoc.orgMemberships||[]).filter(function(m){ return m.orgId !== orgRef.id; });
+    memberships.push(newMembership);
+    await db.collection('users').doc(currentUser.uid).update({
+      orgId: orgRef.id,
+      orgType: createOrgType,
+      role: 'leader',
+      orgMemberships: memberships,
+    });
+    currentUserDoc.orgId = orgRef.id;
+    currentUserDoc.orgType = createOrgType;
+    currentUserDoc.role = 'leader';
+    currentUserDoc.orgMemberships = memberships;
+    currentOrg = { id: orgRef.id, name, type: createOrgType, leaderId: currentUser.uid, joinCode, memberCount: 1 };
+    toast(createOrgType === 'nation' ? 'Nation established!' : 'Organization founded!');
+    await bootApp();
+  } catch(e){ toast('Error: ' + e.message, true); }
+}
+async function joinOrg(type){
+  var inputId = (type === 'organization') ? 'join-code-input-org' : 'join-code-input';
+  const code = document.getElementById(inputId).value.trim().toUpperCase();
+  if(code.length !== 6){ toast('Enter a valid 6-character code.', true); return; }
+  try {
+    const snap = await db.collection('orgs').where('joinCode','==',code).limit(1).get();
+    if(snap.empty){ toast('No Nation or Organization found with that code.', true); return; }
+    const orgDoc = snap.docs[0];
+    const org = { id: orgDoc.id, ...orgDoc.data() };
+
+    // Check blacklist
+    const blSnap = await db.collection('orgs').doc(org.id).collection('blacklist').doc(currentUser.email).get();
+    if(blSnap.exists){ toast('You have been banned from ' + org.name + '.', true); return; }
+
+    // Check if already a member
+    var existing = (currentUserDoc.orgMemberships||[]).find(function(m){ return m.orgId === org.id; });
+    if(existing){ toast('You are already a member of ' + org.name + '.', true); return; }
+
+    var newMembership = { orgId: org.id, role: 'viewer' };
+    var memberships = (currentUserDoc.orgMemberships||[]).concat([newMembership]);
+    await db.collection('users').doc(currentUser.uid).update({
+      orgId: org.id,
+      orgType: org.type,
+      role: 'viewer',
+      orgMemberships: memberships,
+    });
+    await orgDoc.ref.update({ memberCount: firebase.firestore.FieldValue.increment(1) });
+    currentUserDoc.orgId = org.id;
+    currentUserDoc.orgType = org.type;
+    currentUserDoc.role = 'viewer';
+    currentUserDoc.orgMemberships = memberships;
+    currentOrg = org;
+    // Notify the org leader that someone new joined
+    await db.collection('orgs').doc(org.id).collection('notifications').add({
+      type: 'join',
+      message: (currentUser.displayName || currentUser.email) + ' has joined ' + org.name + '.',
+      userEmail: currentUser.email,
+      userName: currentUser.displayName || currentUser.email,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      read: false,
+    });
+    toast('Joined ' + org.name + '!');
+    await bootApp();
+  } catch(e){ toast('Error: ' + e.message, true); }
+}
+function generateJoinCode(){
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  return Array.from({length:6}, ()=>chars[Math.floor(Math.random()*chars.length)]).join('');
+}
+function copyJoinCode(){
+  if(!currentOrg) return;
+  navigator.clipboard.writeText(currentOrg.joinCode).then(()=>toast('Join code copied!'));
+}
+
+// ══════════════════════════════════════════
+// FIRESTORE — TRADES SUBSCRIPTION
+// ══════════════════════════════════════════
+function subscribeToTrades(orgId){
+  // Clear existing trades when switching orgs
+  trades = [];
+  tradingNations = [];
+  renderLedger();
+  if(tradesUnsub) tradesUnsub();
+  var _lastTradeHash = '';
+  tradesUnsub = db.collection('orgs').doc(orgId).collection('trades')
+    .orderBy('date','desc')
+    .onSnapshot(snap => {
+      var newHash = snap.docs.map(d=>d.id+d.updateTime).join('|');
+      if(newHash === _lastTradeHash) return; // nothing actually changed
+      _lastTradeHash = newHash;
+      trades = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      tradingNations = [...new Set(trades.map(t=>t.nation))].sort();
+      buildNationDrop();
+      renderLedger();
+      window._statsNeedsFullRender = true; // trades changed, force stats rebuild
+    }, err => {
+      toast('Error loading trades: ' + err.message, true);
+    });
+}
+
+// ══════════════════════════════════════════
+// DROPDOWN ENGINE
+// ══════════════════════════════════════════
+function toggleDrop(dId,bId){
+  const d=document.getElementById(dId),b=document.getElementById(bId);
+  const wasOpen=!d.classList.contains('hidden');
+  closeDrops();
+  if(!wasOpen){d.classList.remove('hidden');b&&b.classList.add('open');}
+}
+function closeDrops(){
+  document.querySelectorAll('.drop').forEach(d=>d.classList.add('hidden'));
+  document.querySelectorAll('.csb').forEach(b=>b.classList.remove('open'));
+}
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.csw')&&!e.target.closest('.fgrp'))closeDrops();
+});
+function pickFilter(key,val,lbl,lblId,dId,bId){
+  if(key==='type')fType=val;
+  else if(key==='sort')fSort=val;
+  else if(key==='nation')fNation=val;
+  document.getElementById(lblId).innerHTML=lbl;
+  document.querySelectorAll('#'+dId+' .di').forEach(d=>{
+    d.classList.toggle('hi',d.getAttribute&&d.getAttribute('onclick')&&d.getAttribute('onclick').includes("'"+val+"'"));
+  });
+  closeDrops();
+  renderLedger();
+}
+
+// ══════════════════════════════════════════
+// TABS
+// ══════════════════════════════════════════
+const TABS=['ledger','new','stats','nations','members','admin'];
+function switchTab(id){
+  closeDrops();
+  TABS.forEach(t=>document.getElementById('tab-'+t).classList.toggle('hidden',t!==id));
+  document.querySelectorAll('.tb').forEach((b,i)=>b.classList.toggle('on',TABS[i]===id));
+  if(id==='ledger')renderLedger();
+  else if(id==='stats'){window._statsNeedsFullRender=true;buildOrgStatsSidebar();renderStats();loadGlobalGraph();}
+  else if(id==='nations')renderNations();
+  else if(id==='new')initForm();
+  else if(id==='members'){loadMembersPanel();renderOrgBio();}
+  else if(id==='admin')loadAdminConsole();
+}
+
+// ══════════════════════════════════════════
+// NATION FILTER
+// ══════════════════════════════════════════
+function buildNationDrop(){
+  const d=document.getElementById('drop-fn');
+  d.innerHTML=`<div class="di" onclick="pickFilter('nation','','All Nations','csb-fn','drop-fn','csb-fn')">All Nations</div>`+
+    tradingNations.map(n=>`<div class="di" onclick="pickFilter('nation','${esc(n)}','${esc(n)}','csb-fn','drop-fn','csb-fn')">${esc(n)}</div>`).join('');
+}
+
+// ══════════════════════════════════════════
+// LEDGER RENDER
+// ══════════════════════════════════════════
+function renderLedger(){
+  const s=(document.getElementById('l-search')||{value:''}).value.toLowerCase();
+  let d=[...trades];
+  if(s)d=d.filter(t=>t.item.toLowerCase().includes(s)||(t.nation||'').toLowerCase().includes(s)||(t.notes||'').toLowerCase().includes(s));
+  if(fNation)d=d.filter(t=>t.nation===fNation);
+  if(fType)d=d.filter(t=>t.type===fType);
+  if(fSort==='value')d.sort((a,b)=>(b.price*b.qty)-(a.price*a.qty));
+  else if(fSort==='nation')d.sort((a,b)=>(a.nation||'').localeCompare(b.nation||''));
+  else d.sort((a,b)=>new Date(b.date)-new Date(a.date));
+
+  const tot=d.reduce((s,t)=>s+(t.price*t.qty),0);
+  const meta=document.getElementById('lmeta');
+  if(meta){
+    var filterBadge = (s||fType||fNation) ? '<span class="lmeta-filter" onclick="clearLedgerFilters()" title="Click to clear filters">⚑ Filtered — clear ✕</span>' : '';
+    meta.innerHTML = d.length ? `${d.length} record${d.length!==1?'s':''}  ·  Total: <b>${tot.toLocaleString()} ⚙ Ducats</b>${filterBadge}` : '';
+  }
+
+  const body=document.getElementById('ledger-body');
+  if(!body)return;
+  const canDel = currentUserDoc && (currentUserDoc._isMod || ['leader'].includes(currentUserDoc.role));
+  if(!d.length){
+    body.innerHTML=`<div class="empty"><span class="icon">📜</span><p>${trades.length===0?'No trades recorded yet. Begin your ledger.':'No trades match your search.'}</p></div>`;
+    return;
+  }
+  body.innerHTML=`<div class="tw"><table>
+    <thead><tr><th>Date</th><th>Nation</th><th>Item</th><th>Type</th><th>Qty</th><th>Price/unit</th><th>Total ⚙</th><th>Notes</th><th>By</th>${canDel?'<th></th>':''}</tr></thead>
+    <tbody>${d.map(t=>`<tr>
+      <td class="datec">${esc(t.date)}</td>
+      <td><span class="bn">${esc(t.nation||'—')}</span></td>
+      <td><span class="bi">${esc(t.item)}</span></td>
+      <td><span class="${t.type==='sell'?'bts':'btb'}">${t.type==='sell'?'SELL':'BUY'}</span></td>
+      <td style="font-family:'Cinzel',serif;font-size:12px">${Number(t.qty).toLocaleString()}</td>
+      <td class="duc">${Number(t.price).toLocaleString()}</td>
+      <td class="duc duc-t">${(t.price*t.qty).toLocaleString()}</td>
+      <td style="font-size:11px;font-style:italic;color:var(--ink-faint);max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t.notes||'—')}</td>
+      <td style="font-size:9px;color:var(--ink-faint);letter-spacing:1px;white-space:nowrap;" title="Recorded by">${esc(t.recordedBy||'—')}</td>
+      ${canDel?`<td style="white-space:nowrap;"><button class="btn-p" style="padding:3px 8px;font-size:10px;margin-right:4px;" onclick="openEditTrade('${t.id}')">✏</button><button class="btn-del" style="padding:3px 8px;" onclick="delTrade('${t.id}')">✕</button></td>`:''}
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+function clearLedgerFilters(){
+  var s = document.getElementById('l-search');
+  if(s) s.value = '';
+  fType=''; fNation='';
+  // Reset filter dropdowns UI
+  var ftl = document.getElementById('csb-ft-lbl'); if(ftl) ftl.innerHTML='Buy &amp; Sell';
+  var ffl = document.getElementById('csb-fn'); if(ffl){ var lbl=ffl.querySelector('.csb-label'); if(lbl) lbl.textContent='All Nations'; }
+  renderLedger();
+}
+
+async function delTrade(id){
+  if(!confirm('Delete this trade record?')) return;
+  if(!currentOrg) return;
+  // Capture trade data BEFORE deleting in case local array updates mid-flight
+  const t = trades.find(x=>x.id===id);
+  if(!t){ toast('Trade not found.', true); return; }
+  try {
+    await db.collection('orgs').doc(currentOrg.id).collection('trades').doc(id).delete();
+    // Decrement global stats using captured data
+    await updateGlobalStats(t.item, -t.qty, -(t.qty * t.price), true);
+    toast('Trade removed from ledger.');
+  } catch(e){ toast('Error deleting trade: '+e.message, true); }
+}
+
+// ══════════════════════════════════════════
+// NEW TRADE FORM
+// ══════════════════════════════════════════
+function initForm(){
+  const d=document.getElementById('f-date');
+  if(d&&!d.value) d.value=new Date().toISOString().slice(0,10);
+}
+function setFormType(t){
+  formType=t;
+  document.getElementById('csb-type-lbl').textContent=t==='sell'?'Selling':'Buying';
+  document.getElementById('opt-sell').classList.toggle('hi',t==='sell');
+  document.getElementById('opt-buy').classList.toggle('hi',t==='buy');
+  closeDrops();calcPreview();
+}
+function showNationDrop(){
+  const v=document.getElementById('f-nation').value.toLowerCase();
+  const d=document.getElementById('drop-nation');
+  const m=tradingNations.filter(n=>n.toLowerCase().includes(v));
+  if(!m.length){d.classList.add('hidden');return;}
+  d.innerHTML=m.map(n=>`<div class="di" onmousedown="pickNation('${esc(n)}')">${esc(n)}</div>`).join('');
+  d.classList.remove('hidden');
+}
+function pickNation(n){document.getElementById('f-nation').value=n;document.getElementById('drop-nation').classList.add('hidden');}
+function showItemDrop(){
+  const v=document.getElementById('f-item').value.toLowerCase().trim();
+  const d=document.getElementById('drop-item');
+  if(!v){d.classList.add('hidden');return;}
+  let html='',cnt=0;
+  for(const[cat,items]of Object.entries(ITEMS)){
+    const m=items.filter(i=>i.toLowerCase().includes(v));
+    if(m.length){html+=`<div class="dcat">${cat}</div>`+m.map(i=>`<div class="di di-sub" onmousedown="pickItem('${esc(i)}')">${esc(i)}</div>`).join('');cnt+=m.length;}
+  }
+  if(!cnt){const raw=document.getElementById('f-item').value;html=`<div class="di" onmousedown="pickItem('${esc(raw)}')">+ Add "${esc(raw)}" as custom item</div>`;}
+  d.innerHTML=html;d.classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════
+// LIVESTOCK PANEL
+// ══════════════════════════════════════════
+const LIVESTOCK_ITEMS = new Set(['Horse','Donkey','Mule']);
+const HORSE_COATS = ['White','Creamy','Chestnut','Brown','Black','Gray','Dark Brown'];
+const HORSE_MARKS = [
+  { id:'None',                label:'None',                 desc:'No markings — solid coat all over' },
+  { id:'Stockings & Blaze',   label:'Stockings & Blaze',    desc:'White lower legs + white stripe running down the face' },
+  { id:'Paint',               label:'Paint',                desc:'Large irregular white patches splashed across the body' },
+  { id:'Snowflake Appaloosa', label:'Snowflake Appaloosa',  desc:'Small white speckles scattered across the hindquarters' },
+  { id:'Sooty',               label:'Sooty',                desc:'Dark smudgy shading along the back and rump, as if dusted with soot' },
+];
+function pickItem(i){
+  document.getElementById('f-item').value=i;
+  document.getElementById('drop-item').classList.add('hidden');
+  checkLivestock(i);checkSmith(i);checkBrew(i);
+}
+function checkLivestock(item){
+  const panel=document.getElementById('livestock-panel');
+  const fields=document.getElementById('livestock-fields');
+  if(!LIVESTOCK_ITEMS.has(item)){panel.classList.add('hidden');fields.innerHTML='';return;}
+  panel.classList.remove('hidden');
+  const isHorse=(item==='Horse'), isDM=(item==='Donkey'||item==='Mule');
+  fields.innerHTML=
+    (isHorse?`<div class="fgrp"><label>Coat Colour</label><div class="csw" style="width:100%"><button class="csb" id="csb-coat" onclick="toggleDrop('drop-coat','csb-coat')" style="width:100%"><span class="csb-label" id="csb-coat-lbl">Select…</span><span class="arr">▾</span></button><div class="drop hidden" id="drop-coat">`+HORSE_COATS.map(c=>`<div class="di" onclick="pickLSField('coat','${c}','csb-coat-lbl','drop-coat','csb-coat')">${c}</div>`).join('')+`</div></div></div>
+    <div class="fgrp"><label>Markings</label><div class="csw" style="width:100%"><button class="csb" id="csb-mark" onclick="toggleDrop('drop-mark','csb-mark')" style="width:100%"><span class="csb-label" id="csb-mark-lbl">Select…</span><span class="arr">▾</span></button><div class="drop hidden" id="drop-mark" style="min-width:300px">`+HORSE_MARKS.map(m=>`<div class="di" onclick="pickLSField('mark','${m.id}','csb-mark-lbl','drop-mark','csb-mark')" style="padding:8px 12px;display:flex;flex-direction:column;gap:3px;border-bottom:1px solid rgba(58,40,8,.4)"><span style="color:var(--gold);font-size:12px">${m.label}</span><span style="color:#9a7d48;font-size:10px;font-style:italic;line-height:1.3">${m.desc}</span></div>`).join('')+`</div></div></div>`:'')
+    +`<div class="fgrp"><label>Speed <span style="opacity:.5;font-size:9px">(blocks/sec)</span></label><input class="fi" type="number" id="ls-speed" min="0" step="0.1" placeholder="e.g. 11.2 — max 14.6"/></div>
+    <div class="fgrp"><label>Jump Height <span style="opacity:.5;font-size:9px">(blocks)</span></label><input class="fi" type="number" id="ls-jump" min="0" step="0.1" placeholder="e.g. 3.4 — max 5.5"/></div>
+    <div class="fgrp"><label>Health <span style="opacity:.5;font-size:9px">(hearts)</span></label><input class="fi" type="number" id="ls-health" min="0" step="0.5" placeholder="e.g. 26 — max 30"/></div>`
+    +(isDM?`<div class="fgrp"><label>Has Chest?</label><div class="csw" style="width:100%"><button class="csb" id="csb-chest" onclick="toggleDrop('drop-chest','csb-chest')" style="width:100%"><span class="csb-label" id="csb-chest-lbl">Select…</span><span class="arr">▾</span></button><div class="drop hidden" id="drop-chest"><div class="di" onclick="pickLSField('chest','Yes','csb-chest-lbl','drop-chest','csb-chest')">Yes</div><div class="di" onclick="pickLSField('chest','No','csb-chest-lbl','drop-chest','csb-chest')">No</div></div></div></div>`:'');
+}
+function pickLSField(key,val,lblId,dropId){
+  document.getElementById(lblId).textContent=val;
+  document.getElementById(dropId).classList.add('hidden');
+}
+function getLivestockNote(){
+  const item=document.getElementById('f-item').value.trim();
+  if(!LIVESTOCK_ITEMS.has(item))return'';
+  const parts=[];
+  const coat=document.getElementById('csb-coat-lbl');
+  const mark=document.getElementById('csb-mark-lbl');
+  const chest=document.getElementById('csb-chest-lbl');
+  const speed=document.getElementById('ls-speed');
+  const jump=document.getElementById('ls-jump');
+  const health=document.getElementById('ls-health');
+  if(coat&&coat.textContent!=='Select…')parts.push('Coat: '+coat.textContent);
+  if(mark&&mark.textContent!=='Select…')parts.push('Marks: '+mark.textContent);
+  if(speed&&speed.value)parts.push('Speed: '+speed.value+' b/s');
+  if(jump&&jump.value)parts.push('Jump: '+jump.value+' blk');
+  if(health&&health.value)parts.push('HP: '+health.value+'❤');
+  if(chest&&chest.textContent!=='Select…')parts.push('Chest: '+chest.textContent);
+  return parts.length?'['+parts.join(' | ')+']':'';
+}
+
+// ══════════════════════════════════════════
+// SMITH PANEL
+// ══════════════════════════════════════════
+const SMITH_QUALITIES=['Terrible','Poor','Fine','Good','Excellent'];
+const SMITH_GRADES=['★☆☆☆  (1 star)','★★☆☆  (2 star)','★★★☆  (3 star)','★★★★  (4 star — max)'];
+const SMITH_ITEMS = new Set(['Shortsword','Longsword','Arming Sword','Greatsword','Zweihander','Claymore','Falchion','Flamberge','Estoc','Iron Dagger','Steel Dagger','Hunting Knife','Iron Sword','Steel Sword','Cast Iron Sword','Iron Axe','Steel Axe','Battle Axe','Francisca Axe (Throwing)','Dane Axe','Iron Mace','Steel Mace','War Hammer','Morning Star','Flail','Great Maul','Spear','Winged Spear','Pike','Halberd','Glaive','Voulge','Bardiche','War Scythe','Lance','Quarterstaff','Short Bow','Longbow','Crossbow','Arquebus','Gambeson','Padded Coif','Chainmail Helmet','Chainmail Chestplate','Chainmail Leggings','Chainmail Boots','Iron Helmet','Iron Chestplate','Iron Leggings','Iron Boots','Cast Iron Helmet','Cast Iron Chestplate','Cast Iron Leggings','Cast Iron Boots','Steel Helmet','Steel Chestplate','Steel Leggings','Steel Boots','Lamellar Armor','Plate Armor','Wooden Shield','Iron Shield','Steel Shield','Tower Shield','Iron Pickaxe','Steel Pickaxe','Iron Shovel','Iron Hoe','Weapon Blade','Weapon Head','Armor Plate']);
+function checkSmith(item){
+  const panel=document.getElementById('smith-panel'),fields=document.getElementById('smith-fields');
+  if(!SMITH_ITEMS.has(item)){panel.classList.add('hidden');fields.innerHTML='';return;}
+  panel.classList.remove('hidden');
+  fields.innerHTML=`<div class="fgrp"><label>Grade</label><div class="csw" style="width:100%"><button class="csb" id="csb-sgrade" onclick="toggleDrop('drop-sgrade','csb-sgrade')" style="width:100%"><span class="csb-label" id="csb-sgrade-lbl">Select…</span><span class="arr">▾</span></button><div class="drop hidden" id="drop-sgrade">${SMITH_GRADES.map(g=>`<div class="di" onclick="pickLSField('sgrade','${g}','csb-sgrade-lbl','drop-sgrade','csb-sgrade')">${g}</div>`).join('')}</div></div></div><div class="fgrp"><label>Quality</label><div class="csw" style="width:100%"><button class="csb" id="csb-squal" onclick="toggleDrop('drop-squal','csb-squal')" style="width:100%"><span class="csb-label" id="csb-squal-lbl">Select…</span><span class="arr">▾</span></button><div class="drop hidden" id="drop-squal">${SMITH_QUALITIES.map(q=>`<div class="di" onclick="pickLSField('squal','${q}','csb-squal-lbl','drop-squal','csb-squal')">${q}</div>`).join('')}</div></div></div><div class="fgrp"><label>Bonus dmg / defence <span style="opacity:.5;font-size:9px">(optional)</span></label><input class="fi" type="number" id="sm-bonus" step="0.1" placeholder="e.g. +3.6 shown in lore"/></div>`;
+}
+function getSmithNote(){
+  const item=document.getElementById('f-item').value.trim();
+  if(!SMITH_ITEMS.has(item))return'';
+  const parts=[];
+  const grade=document.getElementById('csb-sgrade-lbl');
+  const qual=document.getElementById('csb-squal-lbl');
+  const bonus=document.getElementById('sm-bonus');
+  if(grade&&grade.textContent!=='Select…')parts.push(grade.textContent.split(' ')[0]);
+  if(qual&&qual.textContent!=='Select…')parts.push(qual.textContent);
+  if(bonus&&bonus.value)parts.push('Bonus: +'+bonus.value);
+  return parts.length?'['+parts.join(' · ')+']':'';
+}
+
+// ══════════════════════════════════════════
+// BREWERY PANEL
+// ══════════════════════════════════════════
+const BREW_DATA={'Whiskey':{alcohol:18,difficulty:7,distill:2,barrel:'Any',aging:'18 yrs'},'Brandy':{alcohol:17,difficulty:7,distill:2,barrel:'Any',aging:'16 yrs'},'Aqua Ardens':{alcohol:15,difficulty:6,distill:2,barrel:'Any',aging:'6 yrs'},'Khrenovukha':{alcohol:15,difficulty:6,distill:1,barrel:'Any',aging:'8 yrs'},'Amaretto':{alcohol:14,difficulty:6,distill:1,barrel:'Any',aging:'10 yrs'},'Aqua Vitae':{alcohol:14,difficulty:6,distill:2,barrel:'Any',aging:'6 yrs'},'Braggot':{alcohol:10,difficulty:4,distill:0,barrel:'Any',aging:'10 yrs'},'Bochet':{alcohol:10,difficulty:5,distill:0,barrel:'Any',aging:'12 yrs'},'Sherry':{alcohol:10,difficulty:6,distill:0,barrel:'Any',aging:'20 yrs'},'Port Wine':{alcohol:11,difficulty:6,distill:0,barrel:'Any',aging:'24 yrs'},'Honeyed Wine':{alcohol:9,difficulty:5,distill:0,barrel:'Any',aging:'16 yrs'},'Wormwood Wine':{alcohol:9,difficulty:5,distill:0,barrel:'Any',aging:'12 yrs'},'Tej':{alcohol:9,difficulty:4,distill:0,barrel:'Any',aging:'8 yrs'},'Bragawd':{alcohol:9,difficulty:4,distill:0,barrel:'Any',aging:'8 yrs'},'Bock Beer':{alcohol:9,difficulty:4,distill:0,barrel:'Acacia',aging:'12 yrs'},'Raisin Wine':{alcohol:8,difficulty:4,distill:0,barrel:'Any',aging:'16 yrs'},'Resinated Wine':{alcohol:8,difficulty:5,distill:0,barrel:'Any',aging:'18 yrs'},'Red Wine':{alcohol:8,difficulty:4,distill:0,barrel:'Any',aging:'20 yrs'},'Date Wine':{alcohol:8,difficulty:4,distill:0,barrel:'Any',aging:'14 yrs'},'Sparkling Wine':{alcohol:8,difficulty:5,distill:0,barrel:'Any',aging:'14 yrs'},'White Wine':{alcohol:7,difficulty:4,distill:0,barrel:'Any',aging:'16 yrs'},'Sugarcane Wine':{alcohol:7,difficulty:4,distill:0,barrel:'Any',aging:'10 yrs'},'Herbal Wine':{alcohol:7,difficulty:4,distill:0,barrel:'Any',aging:'12 yrs'},'Clairet':{alcohol:7,difficulty:4,distill:0,barrel:'Any',aging:'6 yrs'},'Apple Cider':{alcohol:6,difficulty:3,distill:0,barrel:'Any',aging:'4 yrs'},'Dark Beer':{alcohol:7,difficulty:2,distill:0,barrel:'Acacia',aging:'8 yrs'},'Klosterbier':{alcohol:8,difficulty:3,distill:0,barrel:'Spruce',aging:'10 yrs'},'Koyt Beer':{alcohol:7,difficulty:3,distill:0,barrel:'Any',aging:'6 yrs'},'Red Ale':{alcohol:6,difficulty:2,distill:0,barrel:'Any',aging:'5 yrs'},'Melomel':{alcohol:9,difficulty:4,distill:0,barrel:'Any',aging:'8 yrs'},'Medovukha':{alcohol:7,difficulty:3,distill:0,barrel:'Any',aging:'6 yrs'},'Airag':{alcohol:6,difficulty:4,distill:0,barrel:'Any',aging:'6 yrs'},'Wheat Beer':{alcohol:5,difficulty:1,distill:0,barrel:'Birch',aging:'3 yrs'},'Wheatbeer':{alcohol:5,difficulty:1,distill:0,barrel:'Birch',aging:'2 yrs'},'Ale':{alcohol:5,difficulty:1,distill:0,barrel:'Any',aging:'3 yrs'},'Grodziskie':{alcohol:5,difficulty:3,distill:0,barrel:'Any',aging:'4 yrs'},'Budweiser':{alcohol:5,difficulty:2,distill:0,barrel:'Any',aging:'4 yrs'},'Mead':{alcohol:9,difficulty:2,distill:0,barrel:'Any',aging:'8 yrs'},'Vinegar':{alcohol:-5,difficulty:2,distill:0,barrel:'Any',aging:'6 yrs'}};
+const BREW_QUALITIES=['Disgusting','Bad','Weak','Normal','Good','Excellent'];
+function checkBrew(item){
+  const panel=document.getElementById('brew-panel'),fields=document.getElementById('brew-fields');
+  if(!BREW_DATA[item]){panel.classList.add('hidden');fields.innerHTML='';return;}
+  const d=BREW_DATA[item];
+  panel.classList.remove('hidden');
+  const alcColor=d.alcohol<0?'#bb4444':d.alcohol>=15?'#c8a86a':'#80bb80';
+  fields.innerHTML=`<div class="fgrp"><label>Batch Quality</label><div class="csw" style="width:100%"><button class="csb" id="csb-bqual" onclick="toggleDrop('drop-bqual','csb-bqual')" style="width:100%"><span class="csb-label" id="csb-bqual-lbl">Select…</span><span class="arr">▾</span></button><div class="drop hidden" id="drop-bqual">${BREW_QUALITIES.map(q=>`<div class="di" onclick="pickLSField('bqual','${q}','csb-bqual-lbl','drop-bqual','csb-bqual')">${q}</div>`).join('')}</div></div></div><div class="fgrp" style="align-self:center"><label>Alcohol Content</label><div style="font-family:'Cinzel',serif;font-size:14px;color:${alcColor};padding:6px 0;">${d.alcohol<0?'−'+Math.abs(d.alcohol):d.alcohol}% ABV${d.alcohol<0?'<span style="font-size:9px;color:var(--ink-faint)"> (acid)</span>':''}</div></div><div class="fgrp" style="align-self:center"><label>Difficulty</label><div style="font-family:'Cinzel',serif;font-size:14px;color:var(--gold-bright);padding:6px 0;">${'⬥'.repeat(d.difficulty)}${'⬦'.repeat(7-d.difficulty)} &nbsp;<span style="font-size:9px;color:var(--ink-faint)">${d.difficulty}/7</span></div></div><div class="fgrp" style="align-self:center"><label>Aging Required</label><div style="font-family:'Cinzel',serif;font-size:13px;color:var(--parchment-light);padding:6px 0;">${d.aging}</div></div><div class="fgrp" style="align-self:center"><label>Barrel Wood</label><div style="font-family:'Cinzel',serif;font-size:13px;color:var(--parchment-light);padding:6px 0;">${d.barrel}</div></div>${d.distill>0?`<div class="fgrp" style="align-self:center"><label>Distilled</label><div style="font-family:'Cinzel',serif;font-size:13px;color:#c8a86a;padding:6px 0;">${d.distill}x runs</div></div>`:''}`;
+}
+function getBrewNote(){
+  const item=document.getElementById('f-item').value.trim();
+  if(!BREW_DATA[item])return'';
+  const d=BREW_DATA[item];
+  const parts=[];
+  const qual=document.getElementById('csb-bqual-lbl');
+  if(qual&&qual.textContent!=='Select…')parts.push(qual.textContent);
+  parts.push((d.alcohol<0?'−'+Math.abs(d.alcohol):d.alcohol)+'% ABV');
+  parts.push('Diff '+d.difficulty+'/7');
+  parts.push(d.aging);
+  if(d.barrel!=='Any')parts.push(d.barrel+' barrel');
+  if(d.distill>0)parts.push('Distilled ×'+d.distill);
+  return parts.length?'['+parts.join(' | ')+']':'';
+}
+function calcPreview(){
+  const q=parseFloat(document.getElementById('f-qty').value)||0;
+  const p=parseFloat(document.getElementById('f-price').value)||0;
+  const el=document.getElementById('tprev');
+  if(q>0&&p>0){
+    document.getElementById('tprev-v').textContent=(q*p).toLocaleString()+' ⚙ Ducats';
+    document.getElementById('tprev-d').textContent=formType==='sell'?'← You receive':'→ You pay';
+    el.classList.remove('hidden');
+  } else el.classList.add('hidden');
+}
+function stepNum(id,dir){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const step=parseFloat(el.step)||1,min=el.min!==''?parseFloat(el.min):-Infinity,cur=parseFloat(el.value)||0;
+  el.value=Math.max(min,+(cur+step*dir).toFixed(10));
+  el.dispatchEvent(new Event('input'));
+}
+
+// ══════════════════════════════════════════
+// SAVE TRADE → FIRESTORE
+// ══════════════════════════════════════════
+async function saveTrade(){
+  if(!currentOrg){ toast('You must be in a Nation/Organization to record trades.', true); return; }
+  if(!currentUserDoc._isMod && !['merchant','leader'].includes(currentUserDoc.role)){ toast('You need Merchant rank or above to record trades.', true); return; }
+  const nation=document.getElementById('f-nation').value.trim();
+  const item=document.getElementById('f-item').value.trim();
+  const qty=parseFloat(document.getElementById('f-qty').value);
+  const price=parseFloat(document.getElementById('f-price').value);
+  const date=document.getElementById('f-date').value;
+  const notesRaw=document.getElementById('f-notes').value.trim();
+  const lsNote=getLivestockNote(), smNote=getSmithNote(), brNote=getBrewNote();
+  const prefixes=[smNote,brNote,lsNote].filter(Boolean).join(' ');
+  const notes=(prefixes&&notesRaw)?prefixes+' '+notesRaw:(prefixes||notesRaw);
+  if(!nation||!item||!qty||!price||!date){ toast('Please fill in Nation, Item, Quantity, Price and Date.', true); return; }
+
+  const tradeData = {
+    nation, item, type: formType, qty, price, date, notes,
+    createdBy: currentUser.uid,
+    recordedBy: currentUser.displayName || currentUser.email,
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+    orgId: currentOrg.id,
+  };
+
+  try {
+    await db.collection('orgs').doc(currentOrg.id).collection('trades').add(tradeData);
+    // Update global anonymous stats
+    await updateGlobalStats(item, qty, qty * price);
+    // Add trading partner to list
+    if(!tradingNations.includes(nation)){
+      tradingNations.push(nation);
+      tradingNations.sort();
+    }
+    // Reset form
+    ['f-nation','f-item','f-qty','f-price','f-notes'].forEach(id=>{
+      const el=document.getElementById(id); if(el) el.value='';
+    });
+    checkLivestock(''); checkSmith(''); checkBrew('');
+    document.getElementById('tprev').classList.add('hidden');
+    toast('Trade recorded in ledger.');
+    setTimeout(()=>switchTab('ledger'), 650);
+  } catch(e){ toast('Error saving trade: '+e.message, true); }
+}
+
+// ══════════════════════════════════════════
+// GLOBAL STATS
+// ══════════════════════════════════════════
+async function updateGlobalStats(item, qtyDelta, valueDelta, isDelete){
+  try {
+    const slug = item.replace(/[^a-zA-Z0-9]/g,'_').toLowerCase();
+    const ref = db.collection('globalStats').doc(slug);
+
+    await ref.set({
+      item,
+      totalQty:   firebase.firestore.FieldValue.increment(qtyDelta),
+      tradeCount: firebase.firestore.FieldValue.increment(isDelete ? -1 : (qtyDelta > 0 ? 1 : 0)),
+      totalValue: firebase.firestore.FieldValue.increment(valueDelta),
+    }, { merge: true });
+
+    // Clean up doc if all stats are zero or below after a deletion
+    if(isDelete){
+      const snap = await ref.get();
+      if(snap.exists){
+        const d = snap.data();
+        if((d.tradeCount || 0) <= 0 || (d.totalQty || 0) <= 0){
+          await ref.delete();
+        }
+      }
+    }
+  } catch(e){ console.warn('Global stats update failed:', e.message); }
+}
+
+// ══════════════════════════════════════════
+// STATS SIDEBAR — ITEM FILTER & PRODUCT LOOKUP
+// ══════════════════════════════════════════
+var _allStatsItems = [];      // full list from Firestore
+var _hiddenItems = new Set();    // items hidden from global graph
+var _selectedItems = new Set(); // legacy alias — not used for filtering
+var _globalDataFull = [];     // full unfiltered global data
+
+function buildStatsSidebar(data){
+  _allStatsItems = data.map(function(d){ return d.item; });
+  // Don't reset hiddenItems on rebuild — preserve user toggle state
+  renderStatsItemList('');
+}
+
+function renderStatsItemList(filter){
+  var list = document.getElementById('stats-item-list');
+  if(!list) return;
+  var filtered = filter
+    ? _allStatsItems.filter(function(i){ return i.toLowerCase().includes(filter.toLowerCase()); })
+    : _allStatsItems;
+  if(!filtered.length){
+    list.innerHTML = '<div style="font-size:10px;color:var(--ink-faint);padding:6px 0;text-align:center;">No items found</div>';
+    return;
+  }
+  list.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:4px;">'
+    + filtered.map(function(item){
+      var on = !_hiddenItems.has(item);
+      return '<span class="item-chip'+(on?' item-chip-on':'')+'" data-item="'+esc(item)+'" onclick="toggleStatsItem(this)" title="'+esc(item)+'">'+esc(item)+'</span>';
+    }).join('')
+    + '</div>';
+}
+
+function toggleStatsItem(el){
+  var item = el.dataset.item;
+  if(_hiddenItems.has(item)){
+    _hiddenItems.delete(item);
+    el.classList.add('item-chip-on');
+  } else {
+    _hiddenItems.add(item);
+    el.classList.remove('item-chip-on');
+  }
+  applyStatsFilter();
+}
+
+function filterStatsItems(){
+  var q = (document.getElementById('stats-search')||{}).value || '';
+  renderStatsItemList(q);
+}
+
+function selectAllStatsItems(){
+  _hiddenItems = new Set(); // unhide everything
+  renderStatsItemList((document.getElementById('stats-search')||{}).value || '');
+  applyStatsFilter();
+}
+
+function clearAllStatsItems(){
+  _hiddenItems = new Set(_allStatsItems); // hide everything
+  renderStatsItemList((document.getElementById('stats-search')||{}).value || '');
+  applyStatsFilter();
+}
+
+function updateFilterBars(){
+  // Global items
+  var fg = document.getElementById('fab-global');
+  if(fg){ var h=_hiddenItems.size; fg.classList.toggle('on',h>0); var t=document.getElementById('fab-global-text'); if(t) t.textContent = h+' HIDDEN'; }
+  // Org items
+  var foi = document.getElementById('fab-org-items');
+  if(foi){ var h2=_hiddenOrgItems.size; foi.classList.toggle('on',h2>0); var t2=document.getElementById('fab-org-items-text'); if(t2) t2.textContent = h2+' HIDDEN'; }
+  // Org nations
+  var fon = document.getElementById('fab-org-nations');
+  if(fon){ var h3=_hiddenOrgNations.size; fon.classList.toggle('on',h3>0); var t3=document.getElementById('fab-org-nations-text'); if(t3) t3.textContent = h3+' HIDDEN'; }
+  // Nations tab
+  var fn = document.getElementById('fab-nations');
+  if(fn){ var h4=_hiddenNations.size; fn.classList.toggle('on',h4>0); var t4=document.getElementById('fab-nations-text'); if(t4) t4.textContent = h4+' HIDDEN'; }
+}
+
+function applyStatsFilter(){
+  if(!_globalDataFull.length) return;
+  updateFilterBars();
+  // _hiddenItems = explicitly hidden. Empty = show all.
+  var filtered = _hiddenItems.size > 0
+    ? _globalDataFull.filter(function(d){ return !_hiddenItems.has(d.item); })
+    : _globalDataFull;
+  window._globalChartData = filtered;
+  if(!filtered.length){
+    if(cG){ cG.destroy(); cG=null; }
+    var cv = document.getElementById('cg-chart');
+    if(cv){ cv.getContext('2d').clearRect(0,0,cv.width,cv.height); }
+    return;
+  }
+  renderGlobalChart(window._globalChartType || 'line');
+}
+
+// ── Product Lookup ──
+function renderProductLookup(){
+  var q = ((document.getElementById('product-lookup-search')||{}).value || '').trim().toLowerCase();
+  var results = document.getElementById('product-lookup-results');
+  if(!results) return;
+  if(!q){ results.innerHTML = '<div style="font-size:10px;color:var(--ink-faint);text-align:center;padding:4px 0;">Type to search…</div>'; return; }
+
+  var matches = _globalDataFull.filter(function(d){ return d.item.toLowerCase().includes(q); });
+
+  // Also check org trades
+  var orgMatches = {};
+  (trades||[]).forEach(function(t){
+    if(!t.item.toLowerCase().includes(q)) return;
+    if(!orgMatches[t.item]) orgMatches[t.item] = { sells:0, buys:0, sellVal:0, buyVal:0, count:0 };
+    orgMatches[t.item].count++;
+    if(t.type==='sell'){ orgMatches[t.item].sells++; orgMatches[t.item].sellVal += t.price*t.qty; }
+    else { orgMatches[t.item].buys++; orgMatches[t.item].buyVal += t.price*t.qty; }
+  });
+
+  if(!matches.length && !Object.keys(orgMatches).length){
+    results.innerHTML = '<div style="font-size:10px;color:var(--ink-faint);text-align:center;padding:4px 0;">No data found</div>';
+    return;
+  }
+
+  // Merge global + org data
+  var allItems = new Set([...matches.map(function(d){return d.item;}), ...Object.keys(orgMatches)]);
+  var html = '';
+  allItems.forEach(function(item){
+    var g = matches.find(function(d){ return d.item === item; });
+    var o = orgMatches[item];
+    var avgPrice = g && g.totalQty > 0 ? Math.round(g.totalValue / g.totalQty) : null;
+    html += '<div class="plookup-card" style="cursor:pointer;transition:border-color .2s;" data-item="'+esc(item)+'" onmouseenter="this.style.borderColor=\'rgba(212,160,23,.5)\'" onmouseleave="this.style.borderColor=\'\'" onclick="openItemDetail(this.dataset.item)">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">'
+      + '<div class="plookup-name" style="margin-bottom:0;">'+esc(item)+'</div>'
+      + '<span style="font-size:9px;color:var(--gold-dim);letter-spacing:1px;">VIEW ▶</span>'
+      + '</div>';
+    if(g){
+      html += '<div class="plookup-row"><span class="plookup-label">GLOBAL TRADES</span><span>'+Number(g.tradeCount||0).toLocaleString()+'</span></div>'
+        + '<div class="plookup-row"><span class="plookup-label">GLOBAL VOL</span><span>'+Number(g.totalQty||0).toLocaleString()+' units</span></div>'
+        + '<div class="plookup-row"><span class="plookup-label">AVG PRICE</span><span>'+(avgPrice !== null ? avgPrice.toLocaleString()+' ⚙' : '—')+'</span></div>'
+        + '<div class="plookup-row"><span class="plookup-label">GLOBAL VALUE</span><span>'+Number(g.totalValue||0).toLocaleString()+' ⚙</span></div>';
+    }
+    if(o){
+      html += '<div style="border-top:1px solid var(--border);margin:6px 0 4px;"></div>'
+        + '<div class="plookup-row"><span class="plookup-label">YOUR SELLS</span><span style="color:#80bb80;">'+o.sells+' ('+Number(o.sellVal).toLocaleString()+' ⚙)</span></div>'
+        + '<div class="plookup-row"><span class="plookup-label">YOUR BUYS</span><span style="color:#bb8080;">'+o.buys+' ('+Number(o.buyVal).toLocaleString()+' ⚙)</span></div>';
+    }
+    html += '</div>';
+  });
+  results.innerHTML = html;
+}
+
+async function loadGlobalGraph(){
+  const body = document.getElementById('global-graph-body');
+  if(!body) return;
+  try {
+    const snap = await db.collection('globalStats').orderBy('totalValue','desc').limit(30).get();
+
+    // Filter out ghost entries (deleted trades that left zero-value docs)
+    const data = snap.docs
+      .map(d => d.data())
+      .filter(d => (d.tradeCount||0) > 0 && (d.totalValue||0) > 0);
+
+    if(!data.length){
+      body.innerHTML = '<div class="empty"><span class="icon">🌐</span><p>No global trade data yet.</p></div>';
+      return;
+    }
+
+    // Sort by tradeCount for market-feel ordering
+    data.sort(function(a,b){ return (b.tradeCount||0) - (a.tradeCount||0); });
+    var top = data.slice(0, 20);
+
+    body.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">' +
+        '<div class="ct" style="margin:0;">🌐 Global Market — All Realms</div>' +
+        '<div style="display:flex;gap:6px;">' +
+          '<button id="gtype-line" class="btn-p" style="padding:4px 12px;font-size:10px;" data-gct="line" onclick="setGlobalChartType(this.dataset.gct)">📈 Line</button>' +
+          '<button id="gtype-candle" class="btn-header" style="padding:4px 12px;font-size:10px;" data-gct="candle" onclick="setGlobalChartType(this.dataset.gct)">🕯 Candle</button>' +
+          '<button id="gtype-bar" class="btn-header" style="padding:4px 12px;font-size:10px;" data-gct="bar" onclick="setGlobalChartType(this.dataset.gct)">📊 Bar</button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="cc" style="margin-bottom:0;padding:16px 12px;height:'+Math.max(180, Math.min(top.length * 44, 460))+'px;"><div style="position:relative;width:100%;height:100%;"><canvas id="cg-chart"></canvas></div></div>';
+
+    window._globalChartData = top;
+    window._globalChartType = 'line';
+    _globalDataFull = top;
+    buildStatsSidebar(top);
+    renderProductLookup();
+    requestAnimationFrame(function(){ renderGlobalChart('line'); });
+
+  } catch(e){
+    body.innerHTML = '<div class="loading">Could not load global data.</div>';
+    console.error('loadGlobalGraph:', e);
+  }
+}
+
+function setGlobalChartType(type){
+  window._globalChartType = type;
+  // Update button styles
+  ['line','candle','bar'].forEach(function(t){
+    var btn = document.getElementById('gtype-'+t);
+    if(!btn) return;
+    btn.className = (t === type) ? 'btn-p' : 'btn-header';
+    btn.style.cssText = 'padding:4px 12px;font-size:10px;';
+  });
+  renderGlobalChart(type);
+}
+
+function renderGlobalChart(type){
+  var data = window._globalChartData;
+  // Always destroy + clear first
+  if(cG){ cG.destroy(); cG = null; }
+  var old = document.getElementById('cg-chart');
+  if(!data || !data.length){
+    if(old){ old.getContext('2d').clearRect(0,0,old.width,old.height); }
+    return;
+  }
+  if(!old) return;
+  var wrapper = old.parentNode;
+  var wh = wrapper.offsetHeight || wrapper.parentElement.offsetHeight || 280;
+  var canvas = document.createElement('canvas');
+  canvas.id = 'cg-chart';
+  canvas.style.width = '100%';
+  canvas.style.display = 'block';
+  wrapper.replaceChild(canvas, old);
+
+  var labels = data.map(function(d){ return d.item; });
+  var avgPrices = data.map(function(d){ return d.totalQty > 0 ? Math.round(d.totalValue / d.totalQty) : 0; });
+  var tradeCounts = data.map(function(d){ return d.tradeCount || 0; });
+  var totalVals = data.map(function(d){ return d.totalValue || 0; });
+
+  var g='rgba(36,22,5,.7)', tf={family:"'Cinzel',serif",size:9}, tc='#7a5828';
+
+  if(type === 'line'){
+    // Stock-style line chart — avg price per item
+    cG = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Avg Price (⚙/unit)',
+          data: avgPrices,
+          borderColor: '#d4a017',
+          backgroundColor: 'rgba(212,160,23,.08)',
+          fill: true,
+          tension: 0.4,
+          pointBackgroundColor: data.map(function(d,i){
+            // Color by trade volume — brighter = more trades
+            var max = Math.max.apply(null, tradeCounts);
+            var intensity = Math.round(100 + 155 * (tradeCounts[i]/max));
+            return 'rgb('+intensity+','+Math.round(intensity*0.75)+',20)';
+          }),
+          pointRadius: 5,
+          pointHoverRadius: 8,
+          borderWidth: 2,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: true, labels: { color: '#a8885a', font: { family: "'Cinzel',serif", size: 9 }, boxWidth: 12, filter: function(i){ return i.text !== 'Price Range'; } } },
+          tooltip: {
+            callbacks: {
+              label: function(c){
+                var d = data[c.dataIndex];
+                return [
+                  ' Avg: '+Number(c.raw).toLocaleString()+' ⚙/unit',
+                  ' Vol: '+Number(d.tradeCount).toLocaleString()+' trades',
+                  ' Total: '+Number(d.totalValue).toLocaleString()+' ⚙'
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid:{color:g}, ticks:{color:'#c8a86a',font:{family:"'IM Fell English',serif",size:9},maxRotation:35,autoSkip:true,maxTicksLimit:12} },
+          y: { grid:{color:g}, ticks:{color:tc,font:tf}, title:{display:true,text:'⚙ Avg Price/Unit',color:tc,font:tf} }
+        }
+      }
+    });
+
+  } else if(type === 'candle'){
+    // Simulated candlestick using a custom floating-bar chart
+    // open=avgPrice*0.85, close=avgPrice, low=avgPrice*0.7, high=avgPrice*1.2 (simulated from total stats)
+    if(data.length === 1){
+      // Single item candle looks better with a min-width hint
+      canvas.style.minWidth = '120px';
+    }
+    // Build candle data + compute price prediction per item
+    // Algorithm: weighted linear regression on avg price vs trade volume (momentum)
+    // More trades = more weight. Trend direction = slope of regression line.
+    // Prediction = last avg + slope * 1 period, clamped to ±30%
+    var allAvgs = data.map(function(d){ return d.totalQty > 0 ? d.totalValue/d.totalQty : 0; });
+    var allVols = data.map(function(d){ return d.tradeCount||1; });
+    var totalVol = allVols.reduce(function(s,v){ return s+v; }, 0);
+
+    // Weighted linear regression: x=index, y=avgPrice, weight=volume
+    var n = data.length;
+    var wSum=0, wxSum=0, wySum=0, wxxSum=0, wxySum=0;
+    for(var ri=0;ri<n;ri++){
+      var w=allVols[ri], x=ri, y=allAvgs[ri];
+      wSum+=w; wxSum+=w*x; wySum+=w*y; wxxSum+=w*x*x; wxySum+=w*x*y;
+    }
+    var slope = n>1 ? (wSum*wxySum - wxSum*wySum)/(wSum*wxxSum - wxSum*wxSum) : 0;
+    var intercept = n>1 ? (wySum - slope*wxSum)/wSum : (allAvgs[0]||0);
+
+    var predictions = data.map(function(d,i){
+      var avg = allAvgs[i];
+      var raw = intercept + slope*(i+1); // next period prediction
+      var maxChange = avg * 0.30;
+      return Math.round(Math.max(avg - maxChange, Math.min(avg + maxChange, raw)));
+    });
+
+    var candleData = data.map(function(d,i){
+      var avg = allAvgs[i];
+      var spread = Math.max(avg * 0.18 * (0.5 + Math.sin(i)*0.3), avg * 0.05 + 1);
+      var trendBias = slope > 0 ? 0.15 : -0.15;
+      var open  = Math.round(avg - spread * (0.4 - trendBias));
+      var close = Math.round(avg + spread * (0.3 + trendBias));
+      var low   = Math.round(Math.min(open,close) - spread * 0.5);
+      var high  = Math.round(Math.max(open,close) + spread * 0.6);
+      return { open, close, low, high, avg: Math.round(avg), pred: predictions[i] };
+    });
+
+    // Draw wicks + bodies via custom plugin
+    var wickPlugin = {
+      id: 'candleWicks',
+      afterDatasetsDraw: function(chart){
+        var ctx = chart.ctx;
+        var meta = chart.getDatasetMeta(0);
+        candleData.forEach(function(c, i){
+          var bar = meta.data[i];
+          if(!bar) return;
+          var x = bar.x;
+          var yHigh = chart.scales.y.getPixelForValue(c.high);
+          var yLow  = chart.scales.y.getPixelForValue(c.low);
+          var yOpen = chart.scales.y.getPixelForValue(c.open);
+          var yClose= chart.scales.y.getPixelForValue(c.close);
+          var color = c.close >= c.open ? '#4a9e6a' : '#9e4a4a';
+          ctx.save();
+          ctx.strokeStyle = color;
+          ctx.lineWidth = 1.5;
+          // Upper wick
+          ctx.beginPath(); ctx.moveTo(x, Math.min(yOpen,yClose)); ctx.lineTo(x, yHigh); ctx.stroke();
+          // Lower wick
+          ctx.beginPath(); ctx.moveTo(x, Math.max(yOpen,yClose)); ctx.lineTo(x, yLow); ctx.stroke();
+          ctx.restore();
+        });
+      }
+    };
+
+    cG = new Chart(canvas, {
+      type: 'bar',
+      plugins: [wickPlugin],
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            type: 'bar',
+            label: 'Price Range',
+            data: candleData.map(function(c){ return [c.open, c.close]; }),
+            backgroundColor: candleData.map(function(c){ return c.close >= c.open ? 'rgba(74,158,106,.75)' : 'rgba(158,74,74,.75)'; }),
+            borderColor:     candleData.map(function(c){ return c.close >= c.open ? '#4a9e6a' : '#9e4a4a'; }),
+            borderWidth: 1,
+            borderRadius: 1,
+            maxBarThickness: 32,
+          },
+          {
+            type: 'line',
+            label: 'Predicted Next Price',
+            data: candleData.map(function(c){ return c.pred; }),
+            borderColor: 'rgba(180,100,220,.8)',
+            borderWidth: 2,
+            borderDash: [5,4],
+            pointBackgroundColor: 'rgba(180,100,220,.9)',
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            fill: false,
+            tension: 0.3,
+            yAxisID: 'y',
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: function(c){
+                var d2 = candleData[c.dataIndex];
+                if(c.dataset.label === 'Predicted Next Price'){
+                  var dir = d2.pred > d2.avg ? '▲ Bullish' : d2.pred < d2.avg ? '▼ Bearish' : '→ Neutral';
+                  return [' Predicted: '+d2.pred+' ⚙/unit', ' '+dir];
+                }
+                return [
+                  ' H: '+d2.high+'  L: '+d2.low,
+                  ' O: '+d2.open+'  C: '+d2.close,
+                  ' Avg: '+d2.avg+' ⚙/unit',
+                  ' Prediction: '+d2.pred+' ⚙ ('+( d2.pred>d2.avg?'▲':'▼')+Math.abs(d2.pred-d2.avg)+')'
+                ];
+              }
+            }
+          }
+        },
+        scales: {
+          x: { grid:{color:g}, ticks:{color:'#c8a86a',font:{family:"'IM Fell English',serif",size:9},maxRotation:35,autoSkip:true,maxTicksLimit:12} },
+          y: { grid:{color:g}, ticks:{color:tc,font:tf}, title:{display:true,text:'⚙ Price/Unit',color:tc,font:tf} }
+        }
+      }
+    });
+
+  } else {
+    // Bar chart — grouped: qty units + total value
+    var qtyData  = data.map(function(d){ return d.totalQty||0; });
+    var avgPriceData = data.map(function(d){ return d.totalQty>0 ? Math.round(d.totalValue/d.totalQty) : 0; });
+
+    cG = new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [
+          {
+            label: 'Units Traded',
+            data: qtyData,
+            backgroundColor: 'rgba(74,124,89,.75)',
+            borderColor: '#4a7c59',
+            borderWidth: 1,
+            maxBarThickness: 20,
+            yAxisID: 'yQty',
+          },
+          {
+            label: 'Avg Price (⚙/unit)',
+            data: avgPriceData,
+            backgroundColor: data.map(function(_,i){ return CHART_C[i%CHART_C.length]+'cc'; }),
+            borderWidth: 0,
+            maxBarThickness: 20,
+            yAxisID: 'yPrice',
+          }
+        ]
+      },
+      options: {
+        indexAxis: 'y',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            labels: { color: '#a8885a', font: { family: "'Cinzel',serif", size: 9 }, boxWidth: 12 }
+          },
+          tooltip: {
+            callbacks: {
+              label: function(c){
+                var d = data[c.dataIndex];
+                if(c.dataset.label === 'Units Traded'){
+                  return ' '+Number(c.raw).toLocaleString()+' units across '+Number(d.tradeCount||0)+' trades';
+                }
+                return ' '+Number(c.raw).toLocaleString()+' ⚙/unit avg  ('+Number(d.totalValue||0).toLocaleString()+' ⚙ total)';
+              }
+            }
+          }
+        },
+        scales: {
+          yQty:  { position:'left',  grid:{color:g}, ticks:{color:'#4a9e6a',font:tf}, title:{display:true,text:'Units',color:'#4a9e6a',font:tf} },
+          yPrice:{ position:'right', grid:{display:false}, ticks:{color:tc,font:tf}, title:{display:true,text:'⚙/unit',color:tc,font:tf} },
+          x: { grid:{display:false}, ticks:{color:'#c8a86a',font:{family:"'IM Fell English',serif",size:11}} }
+        }
+      }
+    });
+  }
+}
+
+// ══════════════════════════════════════════
+// NATIONS SIDEBAR
+// ══════════════════════════════════════════
+var _allNations = [];
+var _hiddenNations = new Set();
+var _selectedNations = new Set();
+
+function buildNationsSidebar(){
+  _allNations = tradingNations.slice().sort();
+  // Remove any hidden nations that no longer exist
+  _hiddenNations.forEach(function(n){ if(!_allNations.includes(n)) _hiddenNations.delete(n); });
+  renderNationsItemList((document.getElementById('nations-search')||{value:''}).value||'');
+}
+
+function renderNationsItemList(filter){
+  var list = document.getElementById('nations-item-list');
+  if(!list) return;
+  var filtered = filter
+    ? _allNations.filter(function(n){ return n.toLowerCase().includes(filter.toLowerCase()); })
+    : _allNations;
+  if(!filtered.length){ list.innerHTML='<div style="font-size:10px;color:var(--ink-faint);text-align:center;padding:4px 0;">None found</div>'; return; }
+  list.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:4px;">'
+    + filtered.map(function(nation){
+      var on = !_hiddenNations.has(nation);
+      return '<span class="item-chip'+(on?' item-chip-on':'')+'" data-n="'+esc(nation)+'" onclick="toggleNationChip(this)" title="'+esc(nation)+'">'+esc(nation)+'</span>';
+    }).join('')
+    + '</div>';
+}
+
+function toggleNation(cb){
+  if(cb.checked) _selectedNations.add(cb.dataset.n);
+  else _selectedNations.delete(cb.dataset.n);
+  renderNations();
+}
+
+function toggleNationFromTag(nation, el){
+  // Nations tab only — toggle visibility of this nation card. Independent from Stats tab.
+  if(_hiddenNations.has(nation)){
+    _hiddenNations.delete(nation);
+    el.classList.remove('nn-off');
+  } else {
+    _hiddenNations.add(nation);
+    el.classList.add('nn-off');
+  }
+  renderNations();
+}
+
+function toggleItemFromTag(item, el){
+  // Nations tab only — toggle item tag display. Completely independent from Stats tab.
+  el.classList.toggle('ntag-off');
+}
+
+function toggleNationChip(el){
+  var n = el.dataset.n;
+  if(_hiddenNations.has(n)){ _hiddenNations.delete(n); el.classList.add('item-chip-on'); }
+  else { _hiddenNations.add(n); el.classList.remove('item-chip-on'); }
+  renderNations();
+}
+
+function filterNationsList(){
+  var q = (document.getElementById('nations-search')||{}).value||'';
+  renderNationsItemList(q);
+}
+
+// ══════════════════════════════════════════
+// ORG STATS SIDEBAR (items + nations)
+// ══════════════════════════════════════════
+var _allOrgItems = [], _selectedOrgItems = new Set();
+var _hiddenOrgItems = new Set();
+var _hiddenOrgNations = new Set();
+var _allOrgNations = [], _selectedOrgNations = new Set();
+
+function buildOrgStatsSidebar(){
+  _allOrgItems = [...new Set((trades||[]).map(function(t){ return t.item; }))].sort();
+  _allOrgNations = [...new Set((trades||[]).map(function(t){ return t.nation; }))].sort();
+  // Clean up hidden sets — remove items that no longer exist
+  _hiddenOrgItems.forEach(function(i){ if(!_allOrgItems.includes(i)) _hiddenOrgItems.delete(i); });
+  _hiddenOrgNations.forEach(function(n){ if(!_allOrgNations.includes(n)) _hiddenOrgNations.delete(n); });
+  renderOrgItemsList('');
+  renderOrgNationsList('');
+}
+
+function renderOrgItemsList(filter){
+  var list = document.getElementById('org-items-list');
+  if(!list) return;
+  var filtered = filter
+    ? _allOrgItems.filter(function(i){ return i.toLowerCase().includes(filter.toLowerCase()); })
+    : _allOrgItems;
+  list.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:4px;">'
+    + filtered.map(function(item){
+      var on = !_hiddenOrgItems.has(item);
+      return '<span class="item-chip'+(on?' item-chip-on':'')+'" data-i="'+esc(item)+'" onclick="toggleOrgItemChip(this)" title="'+esc(item)+'">'+esc(item)+'</span>';
+    }).join('')
+    + '</div>';
+}
+
+function renderOrgNationsList(filter){
+  var list = document.getElementById('org-nations-list');
+  if(!list) return;
+  var filtered = filter
+    ? _allOrgNations.filter(function(n){ return n.toLowerCase().includes(filter.toLowerCase()); })
+    : _allOrgNations;
+  list.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:4px;">'
+    + filtered.map(function(nation){
+      var on = !_hiddenOrgNations.has(nation);
+      return '<span class="item-chip'+(on?' item-chip-on':'')+'" data-n2="'+esc(nation)+'" onclick="toggleOrgNationChip(this)" title="'+esc(nation)+'">'+esc(nation)+'</span>';
+    }).join('')
+    + '</div>';
+}
+
+function toggleOrgItem(cb){
+  if(cb.checked) _selectedOrgItems.add(cb.dataset.i);
+  else _selectedOrgItems.delete(cb.dataset.i);
+  renderStats();
+}
+
+function toggleOrgItemChip(el){
+  var item = el.dataset.i;
+  if(_hiddenOrgItems.has(item)){ _hiddenOrgItems.delete(item); el.classList.add('item-chip-on'); }
+  else { _hiddenOrgItems.add(item); el.classList.remove('item-chip-on'); }
+  renderStats();
+}
+
+function toggleOrgNation(cb){
+  if(cb.checked) _selectedOrgNations.add(cb.dataset.n2);
+  else _selectedOrgNations.delete(cb.dataset.n2);
+  renderStats();
+}
+
+function toggleOrgNationChip(el){
+  var nation = el.dataset.n2;
+  if(_hiddenOrgNations.has(nation)){ _hiddenOrgNations.delete(nation); el.classList.add('item-chip-on'); }
+  else { _hiddenOrgNations.add(nation); el.classList.remove('item-chip-on'); }
+  renderStats();
+}
+
+function filterOrgItems(){
+  var q = (document.getElementById('org-items-search')||{}).value||'';
+  renderOrgItemsList(q);
+}
+
+function filterOrgNations(){
+  var q = (document.getElementById('org-nations-search')||{}).value||'';
+  renderOrgNationsList(q);
+}
+
+function selectAllOrgItems(){
+  _hiddenOrgItems = new Set();
+  renderOrgItemsList((document.getElementById('org-items-search')||{}).value||'');
+  renderStats();
+}
+
+function clearAllOrgItems(){
+  _hiddenOrgItems = new Set(_allOrgItems);
+  renderOrgItemsList((document.getElementById('org-items-search')||{}).value||'');
+  renderStats();
+}
+
+function selectAllOrgNations(){
+  _hiddenOrgNations = new Set();
+  renderOrgNationsList((document.getElementById('org-nations-search')||{}).value||'');
+  renderStats();
+}
+
+function clearAllOrgNations(){
+  _hiddenOrgNations = new Set(_allOrgNations);
+  renderOrgNationsList((document.getElementById('org-nations-search')||{}).value||'');
+  renderStats();
+}
+
+function selectAllNations(){
+  _hiddenNations = new Set();
+  renderNationsItemList((document.getElementById('nations-search')||{}).value||'');
+  renderNations();
+}
+
+function clearAllNations(){
+  _hiddenNations = new Set(_allNations);
+  renderNationsItemList((document.getElementById('nations-search')||{}).value||'');
+  renderNations();
+}
+
+// ══════════════════════════════════════════
+// STATS (your org)
+// ══════════════════════════════════════════
+function renderStats(){
+  const body=document.getElementById('stats-body');
+  if(!trades.length){body.innerHTML='<div class="empty"><span class="icon">📊</span><p>No trades to analyze yet.</p></div>';return;}
+  // Apply sidebar filters — hidden = excluded, empty hidden = show all
+  const ft = trades.filter(function(t){
+    var itemOk   = !_hiddenOrgItems.has(t.item);
+    var nationOk = !_hiddenOrgNations.has(t.nation);
+    return itemOk && nationOk;
+  });
+  const filterActive = _hiddenOrgItems.size > 0 || _hiddenOrgNations.size > 0;
+  updateFilterBars();
+  const tot=ft.reduce((s,t)=>s+t.price*t.qty,0);
+  const sv=ft.filter(t=>t.type==='sell').reduce((s,t)=>s+t.price*t.qty,0);
+  const bv=ft.filter(t=>t.type==='buy').reduce((s,t)=>s+t.price*t.qty,0);
+  const pr=sv-bv;
+  // Cache hash to skip full HTML rebuild if just filtering
+  var _ftHash = ft.map(function(t){return t.id;}).join(',');
+  var _bodyEl = document.getElementById('org-charts-grid');
+  var _chartsExist = !!_bodyEl;
+
+  const bN={};ft.forEach(t=>{if(!bN[t.nation])bN[t.nation]={n:0,v:0};bN[t.nation].n++;bN[t.nation].v+=t.price*t.qty;});
+  const tN=Object.entries(bN).sort((a,b)=>b[1].v-a[1].v).slice(0,8);
+  const bI={};ft.forEach(t=>{if(!bI[t.item])bI[t.item]={n:0,v:0};bI[t.item].n++;bI[t.item].v+=t.price*t.qty;});
+  const tI=Object.entries(bI).sort((a,b)=>b[1].v-a[1].v).slice(0,8);
+  const bM={};ft.forEach(t=>{const k=t.date.slice(0,7);if(!bM[k])bM[k]=0;bM[k]+=t.price*t.qty;});
+  const months=Object.entries(bM).sort((a,b)=>a[0].localeCompare(b[0]));
+  const orgLabel = currentOrg ? `${currentOrg.type==='nation'?'🏰':'⚙'} ${currentOrg.name}` : 'Your Ledger';
+  // Store for re-render on type change
+  _orgNationData = tN; _orgItemData = tI; _orgMonths = months; _orgSV = sv; _orgBV = bv;
+  // Fast-path: if charts exist AND we're just filtering (not switching tabs), skip HTML rebuild
+  if(_chartsExist && !window._statsNeedsFullRender){
+    requestAnimationFrame(function(){ renderOrgCharts(); });
+    return;
+  }
+  window._statsNeedsFullRender = false;
+  const ctypes = ['bar','line','candle'];
+  function ocBtn(t){ return '<button data-oct="'+t+'" onclick="setOrgChartType(this.dataset.oct)" class="'+(t===_orgChartType?'btn-p':'btn-header')+'" style="padding:3px 10px;font-size:9px;">'+(t==='bar'?'📊 Bar':t==='line'?'📈 Line':'🕯 Candle')+'</button>'; }
+  const toggleRow = '<div style="display:flex;gap:5px;margin-bottom:8px;">'+ctypes.map(ocBtn).join('')+'</div>';
+  body.innerHTML=`<div class="stitle">${orgLabel} — Ledger Statistics</div>
+  <div class="sg">
+    <div class="sc"><div class="sv">${ft.length}</div><div class="sk">Trades${filterActive?'<span style=\"font-size:8px;color:var(--gold-dim);display:block;margin-top:2px;\">filtered</span>':''}</div></div>
+    <div class="sc"><div class="sv" style="font-size:19px">${tot.toLocaleString()}</div><div class="sk">⚙ Total</div></div>
+    <div class="sc"><div class="sv" style="font-size:19px;color:#80bb80">${sv.toLocaleString()}</div><div class="sk">⚙ Sold</div></div>
+    <div class="sc"><div class="sv" style="font-size:19px;color:#bb8080">${bv.toLocaleString()}</div><div class="sk">⚙ Bought</div></div>
+    <div class="sc"><div class="sv" style="font-size:19px;color:${pr>=0?'#80bb80':'#bb8080'}">${pr>=0?'+':''}${pr.toLocaleString()}</div><div class="sk">⚙ Net</div></div>
+    <div class="sc"><div class="sv">${new Set(ft.map(t=>t.nation)).size}</div><div class="sk">Nations</div></div>
+    <div class="sc"><div class="sv">${new Set(ft.map(t=>t.item)).size}</div><div class="sk">Items</div></div>
+    <div class="sc"><div class="sv">${ft.filter(t=>t.type==='sell').length}</div><div class="sk">Sell Orders</div></div>
+  </div>
+  ${toggleRow}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;" id="org-charts-grid">
+    <div class="cc" id="cc-nations" style="min-height:260px;"><div class="ct">Top Nations by Trade Value</div><div style="position:relative;height:220px;"><canvas id="cn"></canvas></div></div>
+    <div class="cc" id="cc-items" style="min-height:260px;"><div class="ct">Top Items by Trade Value</div><div style="position:relative;height:220px;"><canvas id="ci"></canvas></div></div>
+    ${months.length>1?`<div class="cc" id="cc-time" style="grid-column:1/-1;min-height:200px;"><div class="ct">Trade Volume Over Time</div><div style="position:relative;height:165px;"><canvas id="ctm"></canvas></div></div>`:''}
+    <div class="cc" style="min-height:280px;"><div class="ct">Buy vs Sell Split</div><div style="position:relative;height:240px;"><canvas id="cp"></canvas></div></div>
+  </div>`;
+  requestAnimationFrame(function(){ renderOrgCharts(); });
+}
+
+function setOrgChartType(type){
+  _orgChartType = type;
+  // Update button styles
+  document.querySelectorAll('[data-oct]').forEach(function(btn){
+    btn.className = btn.dataset.oct === type ? 'btn-p' : 'btn-header';
+    btn.style.cssText = 'padding:3px 10px;font-size:9px;';
+  });
+  renderOrgCharts();
+}
+
+function replaceCanvas(id){
+  var old = document.getElementById(id); if(!old) return null;
+  var c = document.createElement('canvas'); c.id = id;
+  c.style.display = 'block';
+  c.style.width = '100%';
+  c.style.height = '100%';
+  // Ensure parent has a measurable height for Chart.js responsive mode
+  var p = old.parentNode;
+  if(p && !p.style.height && p.offsetHeight < 10){ p.style.height = '200px'; }
+  p.replaceChild(c, old);
+  return c;
+}
+
+function renderOrgCharts(){
+  var g='rgba(36,22,5,.7)',tf={family:"'Cinzel',serif",size:9},tc='#7a5828',tt={callbacks:{label:function(c){return ' '+Number(c.raw).toLocaleString()+' ⚙';}}};
+  // Destroy all existing org charts before redrawing
+  [cN,cI,cT,cP].forEach(function(ch){ if(ch){ try{ch.destroy();}catch(e){} } });
+  cN=cI=cT=cP=null;
+  var tN=_orgNationData, tI=_orgItemData, months=_orgMonths, sv=_orgSV, bv=_orgBV;
+  var t = _orgChartType;
+
+  // Helper: build a bar or line/candle dataset for top-N value data
+  function makeTopChart(canvasId, data, colorOffset){
+    var canvas = replaceCanvas(canvasId); if(!canvas) return null;
+    if(!data || !data.length){ canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height); return null; }
+    var labels = data.map(function(x){ return x[0]; });
+    var vals   = data.map(function(x){ return x[1].v; });
+    var colors = CHART_C.slice(colorOffset||0, (colorOffset||0)+data.length).concat(CHART_C.slice(0,colorOffset||0));
+    if(t === 'line'){
+      return new Chart(canvas,{type:'line',data:{labels,datasets:[{label:'Value',data:vals,borderColor:'#d4a017',backgroundColor:'rgba(212,160,23,.07)',fill:true,tension:0.4,pointBackgroundColor:colors,pointRadius:5,borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:tt},scales:{x:{grid:{color:g},ticks:{color:'#c8a86a',font:{family:"'IM Fell English',serif",size:9},maxRotation:35,autoSkip:true,maxTicksLimit:6}},y:{grid:{color:g},ticks:{color:tc,font:tf,maxTicksLimit:5,callback:function(v){return Number(v)>=1000?Math.round(Number(v)/1000)+'k':v;}}}}}});
+    }
+    if(t === 'candle'){
+      var cdata = vals.map(function(v,i){
+        var sp = Math.max(v*0.12*(0.5+Math.sin(i)*0.3), v*0.04+1);
+        var o=Math.round(v-sp*0.4), cl=Math.round(v+sp*0.3);
+        var lo=Math.round(Math.min(o,cl)-sp*0.5), hi=Math.round(Math.max(o,cl)+sp*0.6);
+        return{open:o,close:cl,low:lo,high:hi,avg:Math.round(v)};
+      });
+      var wickP={id:'cWick'+canvasId,afterDatasetsDraw:function(chart){
+        var ctx=chart.ctx,meta=chart.getDatasetMeta(0);
+        cdata.forEach(function(c,i){var bar=meta.data[i];if(!bar)return;var x=bar.x,col=c.close>=c.open?'#4a9e6a':'#9e4a4a';ctx.save();ctx.strokeStyle=col;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(x,chart.scales.y.getPixelForValue(Math.min(c.open,c.close)));ctx.lineTo(x,chart.scales.y.getPixelForValue(c.high));ctx.stroke();ctx.beginPath();ctx.moveTo(x,chart.scales.y.getPixelForValue(Math.max(c.open,c.close)));ctx.lineTo(x,chart.scales.y.getPixelForValue(c.low));ctx.stroke();ctx.restore();});
+      }};
+      return new Chart(canvas,{type:'bar',plugins:[wickP],data:{labels,datasets:[{data:cdata.map(function(c){return[c.open,c.close];}),backgroundColor:cdata.map(function(c){return c.close>=c.open?'rgba(74,158,106,.75)':'rgba(158,74,74,.75)';}),borderColor:cdata.map(function(c){return c.close>=c.open?'#4a9e6a':'#9e4a4a';}),borderWidth:1,maxBarThickness:32}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:function(c){var d=cdata[c.dataIndex];return[' H:'+d.high+' L:'+d.low,' O:'+d.open+' C:'+d.close,' Avg:'+d.avg+' ⚙'];}}}},scales:{x:{grid:{color:g},ticks:{color:'#c8a86a',font:{family:"'IM Fell English',serif",size:10},maxRotation:30,autoSkip:true,maxTicksLimit:6}},y:{grid:{color:g},ticks:{color:tc,font:tf}}}}});
+    }
+    // Default bar (horizontal for bar mode)
+    return new Chart(canvas,{type:'bar',data:{labels,datasets:[{data:vals,backgroundColor:colors,borderWidth:0,maxBarThickness:28}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:tt},scales:{x:{grid:{color:g},ticks:{color:tc,font:tf,maxTicksLimit:5,callback:function(v){return Number(v)>=1000?Math.round(Number(v)/1000)+'k':v;}},border:{display:false}},y:{grid:{display:false},ticks:{color:'#c8a86a',font:{family:"'IM Fell English',serif",size:10},mirror:false}}}}});
+  }
+
+  if(cN)cN.destroy(); cN = makeTopChart('cn', tN, 0);
+  if(cI)cI.destroy(); cI = makeTopChart('ci', tI, 2);
+
+  // Volume over time — always line
+  if(months.length>1){
+    var ctm = replaceCanvas('ctm');
+    if(ctm){
+    if(cT)cT.destroy();
+    cT = new Chart(ctm, {
+      type: 'line',
+      data: {
+        labels: months.map(function(m){ return m[0]; }),
+        datasets: [{
+          label: 'Ducats',
+          data: months.map(function(m){ return m[1]; }),
+          borderColor: '#c89010',
+          backgroundColor: 'rgba(160,110,8,.07)',
+          fill: true, tension: 0.35,
+          pointBackgroundColor: '#d4a017',
+          pointRadius: 4, borderWidth: 2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: {display:false}, tooltip: tt },
+        scales: {
+          x: { grid:{color:g}, ticks:{color:tc,font:{family:"'Cinzel',serif",size:8},maxRotation:30,autoSkip:true,maxTicksLimit:8} },
+          y: { grid:{color:g}, ticks:{color:tc,font:tf,maxTicksLimit:4,callback:function(v){return Number(v)>=1000?Math.round(Number(v)/1000)+'k':v;}} }
+        }
+      }
+    });
+  }
+  }
+
+  var cp=replaceCanvas('cp'); if(cp){ if(cP)cP.destroy(); cP=new Chart(cp,{type:'doughnut',data:{labels:['Sold','Bought'],datasets:[{data:[sv,bv],backgroundColor:['#36583e','#583620'],borderColor:['#243c2a','#3c2414'],borderWidth:2}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#a8885a',font:{family:"'Cinzel',serif",size:10}}},tooltip:tt}}}); }
+}
+
+
+// ══════════════════════════════════════════
+// NATIONS DOSSIER
+// ══════════════════════════════════════════
+function renderNations(){
+  const body=document.getElementById('nations-body');
+  if(!tradingNations.length){body.innerHTML='<div class="empty"><span class="icon">🏰</span><p>No trading partners recorded yet.</p></div>';return;}
+  // Always rebuild sidebar if stale
+  if(_allNations.length !== tradingNations.length || !_allNations.length) buildNationsSidebar();
+  const sortMode = (document.getElementById('nations-sort')||{value:'value'}).value;
+  updateFilterBars();
+  const visibleNations = tradingNations.filter(n=>!_hiddenNations.has(n));
+  if(!visibleNations.length){body.innerHTML='<div class="empty"><span class="icon">🏰</span><p>No nations match current filter.</p></div>';return;}
+  const stats=visibleNations.map(n=>{
+    const nt=trades.filter(t=>t.nation===n);
+    const sv=nt.filter(t=>t.type==='sell').reduce((s,t)=>s+t.price*t.qty,0);
+    const bv=nt.filter(t=>t.type==='buy').reduce((s,t)=>s+t.price*t.qty,0);
+    const items=[...new Set(nt.map(t=>t.item))];
+    const last=[...nt].sort((a,b)=>new Date(b.date)-new Date(a.date))[0];
+    return{n,nt,sv,bv,items,last};
+  }).sort((a,b)=>{
+    if(sortMode==='trades') return b.nt.length - a.nt.length;
+    if(sortMode==='sold')   return b.sv - a.sv;
+    if(sortMode==='bought') return b.bv - a.bv;
+    if(sortMode==='name')   return a.n.localeCompare(b.n);
+    if(sortMode==='recent'){
+      var da = a.last ? new Date(a.last.date) : new Date(0);
+      var db2 = b.last ? new Date(b.last.date) : new Date(0);
+      return db2 - da;
+    }
+    return (b.sv+b.bv)-(a.sv+a.bv); // default: value
+  });
+  body.innerHTML=stats.map(({n,nt,sv,bv,items,last})=>`
+    <div class="nc">
+      <div style="display:flex;align-items:flex-start;gap:14px;flex:1;min-width:200px">
+        <div>
+          <div class="nn" onclick="toggleNationFromTag('${esc(n)}',this)" title="Click to hide this nation" style="cursor:pointer;">${esc(n)}</div>
+          <div class="ntags">${items.slice(0,6).map(i=>`<span class="ntag" onclick="toggleItemFromTag('${esc(i)}',this)" title="Click to mute this item tag">${esc(i)}</span>`).join('')}${items.length>6?`<span class="ntag">+${items.length-6} more</span>`:''}</div>
+        </div>
+      </div>
+      <div class="nm">
+        <div class="ms"><div class="mv">${nt.length}</div><div class="mk">Trades</div></div>
+        <div class="ms"><div class="mv" style="color:#80bb80">${sv.toLocaleString()}</div><div class="mk">Sold ⚙</div></div>
+        <div class="ms"><div class="mv" style="color:#bb8080">${bv.toLocaleString()}</div><div class="mk">Bought ⚙</div></div>
+        <div class="ms"><div class="mv" style="font-size:11px">${last?last.date:'—'}</div><div class="mk">Last Trade</div></div>
+      </div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════
+// ADMIN CONSOLE
+// ══════════════════════════════════════════
+async function loadMembersPanel(){
+  var body = document.getElementById('members-body');
+  if(!body) return;
+  var isLeaderOrMod = currentUserDoc._isMod || currentUserDoc.role === 'leader';
+  if(!isLeaderOrMod){
+    body.innerHTML = '<div style="color:var(--ink-faint);font-family:Cinzel,serif;font-size:11px;padding:30px 0;text-align:center;letter-spacing:2px;">ACCESS RESTRICTED — Leaders &amp; Moderators Only</div>';
+    return;
+  }
+
+  body.innerHTML = '<div class="loading">Loading members…</div>';
+  loadBlacklist();
+
+  try {
+    var orgId = currentUserDoc.orgId;
+    if(!orgId){ body.innerHTML = '<div style="color:var(--ink-faint);font-size:12px;padding:20px 0;">Not in an organization.</div>'; return; }
+
+    // Query users by orgId field (works for active org + legacy single-org users)
+    var snap = await db.collection('users').where('orgId','==',orgId).get();
+    var categories = { leader: [], merchant: [], viewer: [] };
+
+    // Always include self in case Firestore query misses us
+    var seenUids = {};
+    var allDocs = [];
+    snap.docs.forEach(function(d){ seenUids[d.id]=true; allDocs.push(d); });
+    if(!seenUids[currentUser.uid]){
+      var selfSnap = await db.collection('users').doc(currentUser.uid).get();
+      if(selfSnap.exists) allDocs.push(selfSnap);
+    }
+
+    allDocs.forEach(function(d){
+      var u = d.data(); u._uid = d.id;
+      // Check orgMemberships for this specific org's role
+      var role = null;
+      if(u.orgMemberships && u.orgMemberships.length){
+        var m = u.orgMemberships.find(function(x){ return x.orgId === orgId; });
+        if(m) role = m.role;
+      }
+      if(!role) role = u.role || 'viewer';
+      u._displayRole = role;
+      if(!categories[role]) categories[role] = [];
+      categories[role].push(u);
+    });
+
+    var ROLES = ['viewer','merchant','leader'];
+    var catConfig = {
+      leader:   { label: 'Leaders',   icon: '👑', color: '#C8960C', bg: 'rgba(120,80,0,.18)',  border: 'rgba(180,120,10,.35)' },
+      merchant: { label: 'Merchants', icon: '⚙',  color: '#80bb80', bg: 'rgba(20,60,20,.18)',  border: 'rgba(40,100,40,.35)' },
+      viewer:   { label: 'Viewers',   icon: '👁',  color: '#9090cc', bg: 'rgba(20,20,60,.18)',  border: 'rgba(40,40,100,.35)' },
+    };
+
+    var html = '';
+
+    ['leader','merchant','viewer'].forEach(function(cat){
+      var members = categories[cat] || [];
+      var cfg = catConfig[cat];
+      html += '<div style="margin-bottom:18px;border:1px solid '+cfg.border+';border-radius:6px;overflow:hidden;background:'+cfg.bg+';">'
+            + '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(0,0,0,.28);border-bottom:1px solid '+cfg.border+';">'
+            +   '<div style="display:flex;align-items:center;gap:8px;">'
+            +     '<span style="font-size:16px;">'+cfg.icon+'</span>'
+            +     '<span style="font-family:Cinzel,serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:'+cfg.color+';font-weight:bold;">'+cfg.label+'</span>'
+            +   '</div>'
+            +   '<span style="font-family:Cinzel,serif;font-size:9px;color:var(--ink-faint);letter-spacing:2px;">'+members.length+' member'+(members.length===1?'':'s')+'</span>'
+            + '</div>';
+
+      if(members.length === 0){
+        html += '<div style="padding:14px 16px;font-family:Cinzel,serif;font-size:9px;color:var(--ink-faint);letter-spacing:2px;text-align:center;text-transform:uppercase;">No '+cfg.label.toLowerCase()+' yet</div>';
+      } else {
+        members.forEach(function(u, idx2){
+          var uid = u._uid;
+          var isSelf = uid === currentUser.uid;
+          var isLast = idx2 === members.length - 1;
+          var avatar = u.photoURL
+            ? '<img src="'+u.photoURL+'" style="width:32px;height:32px;border-radius:50%;margin-right:12px;flex-shrink:0;border:2px solid '+cfg.border+';">'
+            : '<div style="width:32px;height:32px;border-radius:50%;background:rgba(80,60,20,.4);margin-right:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;border:1px solid var(--border);">?</div>';
+          var roleOpts = ROLES.map(function(r){
+            return '<option value="'+r+'"'+(u._displayRole===r?' selected':'')+'>'+r.charAt(0).toUpperCase()+r.slice(1)+'</option>';
+          }).join('');
+          var controls = isSelf
+            ? '<span style="font-family:Cinzel,serif;font-size:9px;color:'+cfg.color+';letter-spacing:2px;padding:4px 10px;background:rgba(255,200,50,.08);border:1px solid '+cfg.border+';border-radius:3px;">YOU</span>'
+            : '<div style="display:flex;gap:6px;align-items:center;">'
+              + '<select class="fi" style="padding:4px 8px;font-size:11px;width:112px;" onchange="changeMemberRole(this.dataset.uid,this.value)" data-uid="'+uid+'">'+roleOpts+'</select>'
+              + '<button class="btn-del" style="padding:4px 10px;" onclick="kickMember(this.dataset.uid,this.dataset.name)" data-uid="'+uid+'" data-name="'+esc(u.displayName||u.email)+'" title="Remove">✕</button>'
+              + '</div>';
+          html += '<div style="display:flex;align-items:center;padding:12px 16px;'+(isLast?'':'border-bottom:1px solid '+cfg.border+';')+'">'
+                + avatar
+                + '<div style="flex:1;min-width:0;">'
+                +   '<div style="font-family:Cinzel,serif;font-size:11px;color:var(--parchment);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;text-decoration:underline;text-decoration-color:rgba(212,160,23,.3);" onclick="openMemberHistory(this.dataset.uid,this.dataset.name)" data-uid="'+uid+'" data-name="'+esc(u.displayName||u.email)+'">'+esc(u.displayName||u.email)+'</div>'
+                +   '<div style="font-size:9px;color:var(--ink-faint);letter-spacing:1px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(u.email)+'</div>'
+                + '</div>'
+                + controls + '</div>';
+        });
+      }
+      html += '</div>';
+    });
+
+    // Blacklisted — always rendered as 4th block
+    var blSnap = await db.collection('orgs').doc(orgId).collection('blacklist').get();
+    var blDocs = blSnap.docs || [];
+    html += '<div style="margin-bottom:18px;border:1px solid rgba(160,30,30,.4);border-radius:6px;overflow:hidden;background:rgba(80,10,10,.15);">'
+          + '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:rgba(0,0,0,.3);border-bottom:1px solid rgba(160,30,30,.4);">'
+          +   '<div style="display:flex;align-items:center;gap:8px;">'
+          +     '<span style="font-size:16px;">🚫</span>'
+          +     '<span style="font-family:Cinzel,serif;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#cc4444;font-weight:bold;">Blacklisted</span>'
+          +   '</div>'
+          +   '<span style="font-family:Cinzel,serif;font-size:9px;color:var(--ink-faint);letter-spacing:2px;">'+blDocs.length+' banned</span>'
+          + '</div>';
+
+    if(blDocs.length === 0){
+      html += '<div style="padding:14px 16px;font-family:Cinzel,serif;font-size:9px;color:var(--ink-faint);letter-spacing:2px;text-align:center;text-transform:uppercase;">No banned players</div>';
+    } else {
+      blDocs.forEach(function(d, idx2){
+        var data = d.data();
+        var isLast = idx2 === blDocs.length - 1;
+        html += '<div style="display:flex;align-items:center;padding:12px 16px;'+(isLast?'':'border-bottom:1px solid rgba(160,30,30,.3);">')+'">'
+              + '<div style="width:32px;height:32px;border-radius:50%;background:rgba(120,20,20,.4);margin-right:12px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:14px;">🚫</div>'
+              + '<div style="flex:1;min-width:0;">'
+              +   '<div style="font-family:Cinzel,serif;font-size:11px;color:#cc6060;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(data.email)+'</div>'
+              +   '<div style="font-size:9px;color:var(--ink-faint);letter-spacing:1px;margin-top:2px;">Banned by '+esc(data.bannedBy||'unknown')+'</div>'
+              + '</div>'
+              + '<button class="btn-p" style="padding:4px 12px;font-size:10px;background:rgba(30,70,30,.5);border-color:rgba(50,120,50,.5);color:#80cc80;" onclick="removeFromBlacklist(this.dataset.e)" data-e="'+esc(data.email)+'">Unban</button>'
+              + '</div>';
+      });
+    }
+    html += '</div>';
+
+    body.innerHTML = html;
+  } catch(e){
+    body.innerHTML = '<div style="color:#cc6060;font-size:11px;padding:20px 0;">Error: '+esc(e.message)+'</div>';
+    console.error('loadMembersPanel:', e);
+  }
+}
+
+async function changeMemberRole(uid, newRole){
+  try {
+    var orgId = currentUserDoc.orgId;
+    // Fetch member's current memberships array
+    var memberSnap = await db.collection('users').doc(uid).get();
+    var memberData = memberSnap.data();
+    var memberships = memberData.orgMemberships || [];
+
+    // Update the role entry for this specific org
+    var updated = memberships.map(function(m){
+      return m.orgId === orgId ? { orgId: m.orgId, role: newRole } : m;
+    });
+    // If no entry found (legacy user), add one
+    if(!updated.find(function(m){ return m.orgId === orgId; })){
+      updated.push({ orgId: orgId, role: newRole });
+    }
+
+    // Write both the top-level role AND orgMemberships so both stay in sync
+    var updateData = { orgMemberships: updated };
+    // Only update top-level role if this org is their active org
+    if(memberData.orgId === orgId){ updateData.role = newRole; }
+
+    await db.collection('users').doc(uid).update(updateData);
+    toast('Role updated to ' + newRole.charAt(0).toUpperCase() + newRole.slice(1) + '.');
+    // Smoothly reload the members panel so the role change reflects immediately
+    setTimeout(function(){ loadMembersPanel(); }, 400);
+  } catch(e){
+    toast('Error updating role: ' + e.message, true);
+    loadMembersPanel();
+  }
+}
+
+async function kickMember(uid, name){
+  if(!confirm('Kick '+name+' from this organization? They can rejoin with the code.')) return;
+  try {
+    var memberships = [];
+    var uSnap = await db.collection('users').doc(uid).get();
+    if(uSnap.exists){
+      memberships = (uSnap.data().orgMemberships||[]).filter(function(m){ return m.orgId !== currentUserDoc.orgId; });
+    }
+    var newOrgId = memberships.length > 0 ? memberships[0].orgId : null;
+    await db.collection('users').doc(uid).update({
+      orgId: newOrgId,
+      role: newOrgId ? memberships[0].role : 'viewer',
+      orgMemberships: memberships,
+    });
+    await db.collection('orgs').doc(currentUserDoc.orgId).update({ memberCount: firebase.firestore.FieldValue.increment(-1) });
+    toast(name+' has been removed from the organization.');
+    loadMembersPanel();
+  } catch(e){ toast('Error: '+e.message, true); }
+}
+
+async function addToBlacklist(){
+  var email = document.getElementById('blacklist-email-input').value.trim().toLowerCase();
+  if(!email){ toast('Enter an email address.', true); return; }
+  if(!currentUserDoc.orgId){ toast('You are not in an org.', true); return; }
+  try {
+    await db.collection('orgs').doc(currentUserDoc.orgId).collection('blacklist').doc(email).set({
+      email: email,
+      bannedBy: currentUser.email,
+      bannedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    document.getElementById('blacklist-email-input').value = '';
+    toast(email+' added to blacklist.');
+    loadBlacklist();
+  } catch(e){ toast('Error: '+e.message, true); }
+}
+
+async function removeFromBlacklist(email){
+  if(!currentUserDoc.orgId) return;
+  try {
+    await db.collection('orgs').doc(currentUserDoc.orgId).collection('blacklist').doc(email).delete();
+    toast(email+' removed from blacklist.');
+    loadBlacklist();
+  } catch(e){ toast('Error: '+e.message, true); }
+}
+
+async function loadBlacklist(){
+  var el = document.getElementById('blacklist-body');
+  if(!el || !currentUserDoc.orgId) return;
+  try {
+    var snap = await db.collection('orgs').doc(currentUserDoc.orgId).collection('blacklist').get();
+    if(snap.empty){
+      el.innerHTML = '<div style="font-family:Cinzel,serif;font-size:9px;color:var(--ink-faint);letter-spacing:2px;text-transform:uppercase;padding:6px 0;">No banned players.</div>';
+      return;
+    }
+    var rows = '';
+    snap.docs.forEach(function(d){
+      var data = d.data();
+      rows += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">'
+            + '<span style="font-family:Cinzel,serif;font-size:11px;color:#cc6060;">'+esc(data.email)+'</span>'
+            + '<button class="btn-del" style="padding:4px 10px;" onclick="removeFromBlacklist(this.dataset.e)" data-e="'+esc(data.email)+'">Remove</button>'
+            + '</div>';
+    });
+    el.innerHTML = rows;
+  } catch(e){ el.innerHTML = '<div style="color:#cc6060;font-size:10px;">Error loading blacklist.</div>'; }
+}
+
+async function loadAdminConsole(){
+  const body = document.getElementById('admin-body');
+  if(!body) return;
+  if(!currentUserDoc._isMod) return;
+  loadModeratorList();
+  body.innerHTML='<div class="loading">Loading all organizations…</div>';
+  try {
+    const orgsSnap = await db.collection('orgs').get();
+    if(orgsSnap.empty){
+      body.innerHTML='<div class="empty"><span class="icon">🏰</span><p>No organizations exist yet.</p></div>';
+      return;
+    }
+    body.innerHTML = orgsSnap.docs.map(orgDoc=>{
+      const org = orgDoc.data();
+      return `<div class="admin-org-card">
+        <div class="admin-org-header" onclick="toggleAdminOrg('adm-${orgDoc.id}')">
+          <div>
+            <div class="admin-org-name">${esc(org.name)} <span style="font-family:'Cinzel',serif;font-size:9px;color:var(--ink-faint);letter-spacing:1px;">${org.type==='nation'?'🏰 Nation':'⚙ Organization'}</span></div>
+            <div class="admin-org-meta">Join Code: ${org.joinCode} · Members: ${org.memberCount||'?'} · Leader: ${esc(org.leaderId||'?')}</div>
+          </div>
+          <span style="color:var(--gold-dim);font-size:10px;">▶</span>
+        </div>
+        <div class="admin-org-body" id="adm-${orgDoc.id}">
+          <button class="btn-sm" onclick="loadAdminOrgTrades('${orgDoc.id}','adm-trades-${orgDoc.id}')">Load Trades</button>
+          <button class="btn-del" style="margin-left:8px" onclick="adminDeleteOrg('${orgDoc.id}','${esc(org.name)}')">✕ Delete Org</button>
+          <div id="adm-trades-${orgDoc.id}" style="margin-top:12px;"></div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e){ body.innerHTML='<div class="loading">Error: '+esc(e.message)+'</div>'; }
+}
+function toggleAdminOrg(id){
+  const el=document.getElementById(id);
+  if(el) el.classList.toggle('open');
+}
+async function loadAdminOrgTrades(orgId, targetId){
+  const target = document.getElementById(targetId);
+  if(!target) return;
+  target.innerHTML='<div class="loading">Loading…</div>';
+  try {
+    const snap = await db.collection('orgs').doc(orgId).collection('trades').orderBy('date','desc').limit(50).get();
+    if(snap.empty){ target.innerHTML='<div style="font-family:\'Cinzel\',serif;font-size:9px;color:var(--ink-faint);letter-spacing:2px;text-transform:uppercase;padding:10px 0;">No trades recorded.</div>'; return; }
+    const tdata = snap.docs.map(d=>({id:d.id,...d.data()}));
+    target.innerHTML=`<div class="tw"><table><thead><tr><th>Date</th><th>Nation</th><th>Item</th><th>Type</th><th>Qty</th><th>Total ⚙</th></tr></thead><tbody>${tdata.map(t=>`<tr><td class="datec">${esc(t.date)}</td><td><span class="bn">${esc(t.nation||'—')}</span></td><td><span class="bi">${esc(t.item)}</span></td><td><span class="${t.type==='sell'?'bts':'btb'}">${t.type==='sell'?'SELL':'BUY'}</span></td><td style="font-family:'Cinzel',serif;font-size:12px">${Number(t.qty).toLocaleString()}</td><td class="duc">${(t.price*t.qty).toLocaleString()}</td></tr>`).join('')}</tbody></table></div>`;
+  } catch(e){ target.innerHTML='<div class="loading">Error: '+esc(e.message)+'</div>'; }
+}
+async function adminDeleteOrg(orgId, orgName){
+  if(!confirm(`DELETE "${orgName}" and all its trades? This cannot be undone.`)) return;
+  try {
+    // Delete all trades in subcollection
+    const tradesSnap = await db.collection('orgs').doc(orgId).collection('trades').get();
+    const batch = db.batch();
+    tradesSnap.docs.forEach(d => batch.delete(d.ref));
+    await batch.commit();
+    // Delete org doc
+    await db.collection('orgs').doc(orgId).delete();
+    // Reset all users in that org
+    const usersSnap = await db.collection('users').where('orgId','==',orgId).get();
+    const b2 = db.batch();
+    usersSnap.docs.forEach(d => b2.update(d.ref, { orgId: null, orgType: null, role: 'viewer' }));
+    await b2.commit();
+    toast('Organization deleted.');
+    loadAdminConsole();
+  } catch(e){ toast('Error: '+e.message, true); }
+}
+async function appointModerator(){
+  const email = document.getElementById('mod-email-input').value.trim().toLowerCase();
+  if(!email){ toast('Enter an email address.', true); return; }
+  try {
+    // Write to /moderators collection — rules and app both check here
+    await db.collection('moderators').doc(email).set({
+      email,
+      grantedBy: currentUser.email,
+      grantedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    toast(email + ' has been granted Moderator rank.');
+    document.getElementById('mod-email-input').value='';
+    // Reload mod list display
+    loadModeratorList();
+  } catch(e){ toast('Error: '+e.message, true); }
+}
+
+async function revokeModerator(email){
+  if(!confirm('Revoke moderator rank from ' + email + '?')) return;
+  try {
+    await db.collection('moderators').doc(email).delete();
+    toast(email + ' moderator rank revoked.');
+    loadModeratorList();
+  } catch(e){ toast('Error: '+e.message, true); }
+}
+
+async function loadModeratorList(){
+  var el = document.getElementById('mod-list');
+  if(!el) return;
+  try {
+    var snap = await db.collection('moderators').get();
+    if(snap.empty){
+      el.innerHTML = '<div style="font-family:Cinzel,serif;font-size:9px;color:var(--ink-faint);letter-spacing:2px;text-transform:uppercase;padding:8px 0;">No moderators appointed yet.</div>';
+      return;
+    }
+    var rows = '';
+    snap.docs.forEach(function(d){
+      var data = d.data();
+      var isSelf = data.email === currentUser.email;
+      var youTag = isSelf ? ' <span style="font-family:Cinzel,serif;font-size:8px;color:var(--ink-faint);">(you)</span>' : '';
+      var revokeBtn = isSelf ? '' : '<button class="btn-del" onclick="revokeModerator(this.dataset.e)" data-e="' + esc(data.email) + '">Revoke</button>';
+      rows += '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">'
+            + '<div><span style="font-family:Cinzel,serif;font-size:11px;color:var(--gold-bright);">' + esc(data.email) + '</span>' + youTag + '</div>'
+            + revokeBtn + '</div>';
+    });
+    el.innerHTML = rows;
+  } catch(e){ el.innerHTML = '<div style="color:#cc6060;font-size:10px;">Error loading moderators.</div>'; }
+}
+
+// ══════════════════════════════════════════
+// UTILS
+// ══════════════════════════════════════════
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+// ══════════════════════════════════════════
+// ITEM DETAIL MODAL
+// ══════════════════════════════════════════
+var _itemOrgChart = null, _itemGlobalChart = null;
+
+function openItemDetail(item){
+  var modal = document.getElementById('item-detail-modal');
+  document.getElementById('item-detail-name').textContent = item;
+  modal.style.display = 'flex';
+
+  // ── Stats row ──
+  var g = _globalDataFull.find(function(d){ return d.item === item; });
+  var orgTrades = (trades||[]).filter(function(t){ return t.item === item; });
+  var orgSells = orgTrades.filter(function(t){ return t.type==='sell'; });
+  var orgBuys  = orgTrades.filter(function(t){ return t.type==='buy'; });
+  var orgSellVal = orgSells.reduce(function(s,t){ return s+t.price*t.qty; }, 0);
+  var orgBuyVal  = orgBuys.reduce(function(s,t){ return s+t.price*t.qty; }, 0);
+  var avgGlobal = g && g.totalQty > 0 ? Math.round(g.totalValue / g.totalQty) : null;
+  var avgOrg = orgTrades.length > 0
+    ? Math.round(orgTrades.reduce(function(s,t){ return s+t.price; },0) / orgTrades.length) : null;
+
+  var stats = [
+    { label:'Global Trades', val: g ? Number(g.tradeCount||0).toLocaleString() : '—', color:'' },
+    { label:'Global Avg Price', val: avgGlobal !== null ? avgGlobal.toLocaleString()+' ⚙' : '—', color:'var(--gold)' },
+    { label:'Global Volume', val: g ? Number(g.totalQty||0).toLocaleString()+' units' : '—', color:'' },
+    { label:'Global Value', val: g ? Number(g.totalValue||0).toLocaleString()+' ⚙' : '—', color:'var(--gold-dim)' },
+    { label:'Your Trades', val: orgTrades.length.toLocaleString(), color:'' },
+    { label:'Your Avg Price', val: avgOrg !== null ? avgOrg.toLocaleString()+' ⚙' : '—', color:'var(--gold)' },
+    { label:'Your Sold', val: orgSellVal.toLocaleString()+' ⚙', color:'#80bb80' },
+    { label:'Your Bought', val: orgBuyVal.toLocaleString()+' ⚙', color:'#bb8080' },
+  ];
+
+  document.getElementById('item-detail-stats').innerHTML = stats.map(function(s){
+    return '<div class="card" style="padding:10px 12px;text-align:center;background:var(--paper);color:var(--ink);">'
+      + '<div style="font-family:Cinzel,serif;font-size:'+(s.val.length>8?'13':'16')+'px;color:'+(s.color||'var(--parchment)')+';">'+s.val+'</div>'
+      + '<div style="font-size:8px;color:var(--ink-faint);letter-spacing:1px;margin-top:4px;text-transform:uppercase;">'+s.label+'</div>'
+      + '</div>';
+  }).join('');
+
+  // ── Org chart: price over time ──
+  if(_itemOrgChart){ _itemOrgChart.destroy(); _itemOrgChart = null; }
+  var orgCanvas = document.getElementById('item-org-chart');
+  var orgEmpty  = document.getElementById('item-org-empty');
+  if(orgTrades.length > 0){
+    orgCanvas.style.display = '';
+    orgEmpty.style.display = 'none';
+    var sorted = orgTrades.slice().sort(function(a,b){ return a.date.localeCompare(b.date); });
+    var g2='rgba(36,22,5,.7)', tf={family:"'Cinzel',serif",size:8}, tc='#7a5828';
+    _itemOrgChart = new Chart(orgCanvas, {
+      type: 'line',
+      data: {
+        labels: sorted.map(function(t){ return t.date; }),
+        datasets: [
+          {
+            label: 'Price/unit',
+            data: sorted.map(function(t){ return t.price; }),
+            borderColor: '#d4a017',
+            backgroundColor: 'rgba(212,160,23,.07)',
+            fill: true, tension: 0.3,
+            pointBackgroundColor: sorted.map(function(t){ return t.type==='sell'?'#4a9e6a':'#9e4a4a'; }),
+            pointRadius: 5, pointHoverRadius: 7, borderWidth: 2,
+          },
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: function(c){
+            var t2 = sorted[c.dataIndex];
+            return [' Price: '+c.raw+' ⚙/unit', ' Qty: '+t2.qty, ' Type: '+t2.type, ' Nation: '+(t2.nation||'—')];
+          }}}
+        },
+        scales: {
+          x: { grid:{color:g2}, ticks:{color:tc,font:tf,maxRotation:30} },
+          y: { grid:{color:g2}, ticks:{color:tc,font:tf}, title:{display:true,text:'⚙/unit',color:tc,font:tf} }
+        }
+      }
+    });
+  } else {
+    orgCanvas.style.display = 'none';
+    orgEmpty.style.display = 'block';
+  }
+
+  // ── Global chart: bar showing avg price + volume as second axis ──
+  if(_itemGlobalChart){ _itemGlobalChart.destroy(); _itemGlobalChart = null; }
+  var glCanvas = document.getElementById('item-global-chart');
+  var glEmpty  = document.getElementById('item-global-empty');
+  if(g && (g.tradeCount||0) > 0){
+    glCanvas.style.display = '';
+    glEmpty.style.display = 'none';
+    var g2='rgba(36,22,5,.7)', tf={family:"'Cinzel',serif",size:8}, tc='#7a5828';
+    var avg2 = g.totalQty > 0 ? Math.round(g.totalValue/g.totalQty) : 0;
+    _itemGlobalChart = new Chart(glCanvas, {
+      type: 'bar',
+      data: {
+        labels: ['Avg Price','Total Volume','Total Value','Trade Count'],
+        datasets: [{
+          data: [avg2, g.totalQty||0, g.totalValue||0, g.tradeCount||0],
+          backgroundColor: ['#d4a017','#4a7c59','#1a4a7c','#7c1a4a'],
+          borderWidth: 0, maxBarThickness: 40,
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: function(c){ return ' '+Number(c.raw).toLocaleString()+(c.dataIndex===0?' ⚙/unit':c.dataIndex===2?' ⚙':''); }}}
+        },
+        scales: {
+          x: { grid:{display:false}, ticks:{color:'#c8a86a',font:{family:"'IM Fell English',serif",size:11}} },
+          y: { grid:{color:g2}, ticks:{color:tc,font:tf} }
+        }
+      }
+    });
+  } else {
+    glCanvas.style.display = 'none';
+    glEmpty.style.display = 'block';
+  }
+
+  // ── Trade list ──
+  var tradeEl = document.getElementById('item-detail-trades');
+  if(orgTrades.length === 0){
+    tradeEl.innerHTML = '<div style="font-size:10px;color:var(--ink-faint);text-align:center;padding:10px;">No trades recorded for this item in your org.</div>';
+  } else {
+    var sorted2 = orgTrades.slice().sort(function(a,b){ return b.date.localeCompare(a.date); });
+    tradeEl.innerHTML = '<div class="tw"><table>'
+      + '<thead><tr><th>Date</th><th>Nation</th><th>Type</th><th>Qty</th><th>Price</th><th>Total</th><th>By</th></tr></thead>'
+      + '<tbody>'
+      + sorted2.map(function(t){
+          return '<tr>'
+            + '<td class="datec">'+esc(t.date)+'</td>'
+            + '<td><span class="bn">'+esc(t.nation||'—')+'</span></td>'
+            + '<td><span class="'+(t.type==='sell'?'bts':'btb')+'">'+( t.type==='sell'?'SELL':'BUY')+'</span></td>'
+            + '<td>'+Number(t.qty).toLocaleString()+'</td>'
+            + '<td class="duc">'+Number(t.price).toLocaleString()+'</td>'
+            + '<td class="duc duc-t">'+(t.price*t.qty).toLocaleString()+'</td>'
+            + '<td style="font-size:9px;color:var(--ink-faint);">'+esc(t.recordedBy||'—')+'</td>'
+            + '</tr>';
+        }).join('')
+      + '</tbody></table></div>';
+  }
+}
+
+// ══════════════════════════════════════════
+// EDIT TRADE
+// ══════════════════════════════════════════
+function openEditTrade(id){
+  var t = trades.find(function(x){ return x.id === id; });
+  if(!t) return;
+  document.getElementById('edit-trade-id').value = id;
+  document.getElementById('edit-nation').value = t.nation || '';
+  document.getElementById('edit-item').value = t.item || '';
+  document.getElementById('edit-type').value = t.type || 'sell';
+  document.getElementById('edit-qty').value = t.qty || '';
+  document.getElementById('edit-price').value = t.price || '';
+  document.getElementById('edit-date').value = t.date || '';
+  document.getElementById('edit-notes').value = t.notes || '';
+  document.getElementById('edit-trade-modal').style.display = 'flex';
+}
+function closeEditModal(){
+  document.getElementById('edit-trade-modal').style.display = 'none';
+}
+async function saveEditTrade(){
+  var id = document.getElementById('edit-trade-id').value;
+  var nation = document.getElementById('edit-nation').value.trim();
+  var item = document.getElementById('edit-item').value.trim();
+  var type = document.getElementById('edit-type').value;
+  var qty = Number(document.getElementById('edit-qty').value);
+  var price = Number(document.getElementById('edit-price').value);
+  var date = document.getElementById('edit-date').value;
+  var notes = document.getElementById('edit-notes').value.trim();
+  if(!nation||!item||!qty||!price||!date){ toast('Please fill all required fields.', true); return; }
+  try {
+    var old = trades.find(function(x){ return x.id===id; });
+    // Update global stats: remove old, add new
+    if(old){ await updateGlobalStats(old.item, -old.qty, -(old.qty*old.price)); }
+    await db.collection('orgs').doc(currentOrg.id).collection('trades').doc(id).update({
+      nation: nation, item: item, type: type, qty: qty, price: price, date: date, notes: notes,
+      editedBy: currentUser.displayName || currentUser.email,
+      editedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    });
+    await updateGlobalStats(item, qty, qty * price);
+    // Update local trades array immediately so re-render is instant
+    var idx = trades.findIndex(function(x){ return x.id===id; });
+    if(idx !== -1) trades[idx] = Object.assign(trades[idx], { nation:nation, item:item, type:type, qty:qty, price:price, date:date, notes:notes });
+    renderLedger();
+    toast('Trade updated.');
+    closeEditModal();
+  } catch(e){ toast('Error: ' + e.message, true); }
+}
+
+// ══════════════════════════════════════════
+// EXPORT CSV
+// ══════════════════════════════════════════
+function exportCSV(){
+  if(!trades.length){ toast('No trades to export.', true); return; }
+  var rows = [['Date','Nation','Item','Type','Quantity','Price/unit','Total','Notes','Recorded By']];
+  trades.forEach(function(t){
+    rows.push([
+      t.date||'', t.nation||'', t.item||'', t.type||'',
+      t.qty||0, t.price||0, (t.qty*t.price)||0,
+      (t.notes||'').replace(/,/g,' '), t.recordedBy||''
+    ]);
+  });
+  var csv = rows.map(function(r){ return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(','); }).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = (currentOrg ? currentOrg.name.replace(/\s+/g,'_') : 'ledger') + '_trades.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+  toast('CSV exported!');
+}
+
+// ══════════════════════════════════════════
+// INVITE LINK
+// ══════════════════════════════════════════
+function copyInviteLink(){
+  if(!currentOrg) return;
+  var base = 'https://mvndicraft-ledger.web.app';
+  var link = base + '?join=' + (currentOrg.joinCode || '');
+  navigator.clipboard.writeText(link).then(function(){
+    toast('Invite link copied! Share it with players to let them join directly.');
+  }).catch(function(){
+    toast('Link: ' + link);
+  });
+}
+
+// Handle ?join= param on page load
+(function(){
+  try {
+    var params = new URLSearchParams(window.location.search);
+    var code = params.get('join');
+    if(code){
+      // Store for use after login
+      sessionStorage.setItem('pendingJoinCode', code);
+    }
+  } catch(e){}
+})();
+
+// ══════════════════════════════════════════
+// ORG BIO
+// ══════════════════════════════════════════
+function openOrgBio(){
+  if(!currentOrg) return;
+  document.getElementById('org-bio-input').value = currentOrg.bio || '';
+  document.getElementById('org-bio-modal').style.display = 'flex';
+}
+async function saveOrgBio(){
+  var bio = document.getElementById('org-bio-input').value.trim();
+  try {
+    await db.collection('orgs').doc(currentOrg.id).update({ bio: bio });
+    currentOrg.bio = bio;
+    renderOrgBio();
+    document.getElementById('org-bio-modal').style.display = 'none';
+    toast('Description saved.');
+  } catch(e){ toast('Error: ' + e.message, true); }
+}
+function renderOrgBio(){
+  var el = document.getElementById('org-bio-display');
+  if(!el) return;
+  if(currentOrg && currentOrg.bio){
+    el.textContent = '\u201c' + currentOrg.bio + '\u201d';
+    el.style.display = 'block';
+  } else {
+    el.style.display = 'none';
+  }
+}
+
+// ══════════════════════════════════════════
+// MEMBER TRADE HISTORY
+// ══════════════════════════════════════════
+async function openMemberHistory(uid, name){
+  var modal = document.getElementById('member-history-modal');
+  var body = document.getElementById('member-history-body');
+  var title = document.getElementById('member-history-title');
+  title.textContent = '📜 ' + name + ' — Trade History';
+  body.innerHTML = '<div class="loading">Loading…</div>';
+  modal.style.display = 'flex';
+  try {
+    var snap = await db.collection('orgs').doc(currentOrg.id).collection('trades')
+      .where('createdBy','==',uid).get();
+    if(snap.empty){
+      body.innerHTML = '<div style="color:var(--ink-faint);font-family:Cinzel,serif;font-size:10px;text-align:center;padding:20px;letter-spacing:2px;">No trades recorded by this member.</div>';
+      return;
+    }
+    var memberTrades = snap.docs.map(function(d){ return Object.assign({ id: d.id }, d.data()); });
+    memberTrades.sort(function(a,b){ return new Date(b.date) - new Date(a.date); });
+    var total = memberTrades.reduce(function(s,t){ return s + (t.price*t.qty); }, 0);
+    var html = '<div style="font-family:Cinzel,serif;font-size:9px;color:var(--gold-dim);letter-spacing:2px;margin-bottom:12px;">'+memberTrades.length+' trades · Total: '+total.toLocaleString()+' ⚙ Ducats</div>';
+    html += '<div class="tw"><table><thead><tr><th>Date</th><th>Nation</th><th>Item</th><th>Type</th><th>Qty</th><th>Price</th><th>Total ⚙</th><th>Notes</th></tr></thead><tbody>';
+    memberTrades.forEach(function(t){
+      html += '<tr>'
+        + '<td class="datec">'+esc(t.date)+'</td>'
+        + '<td><span class="bn">'+esc(t.nation||'—')+'</span></td>'
+        + '<td><span class="bi">'+esc(t.item)+'</span></td>'
+        + '<td><span class="'+(t.type==='sell'?'bts':'btb')+'">'+( t.type==='sell'?'SELL':'BUY')+'</span></td>'
+        + '<td>'+Number(t.qty).toLocaleString()+'</td>'
+        + '<td class="duc">'+Number(t.price).toLocaleString()+'</td>'
+        + '<td class="duc duc-t">'+(t.price*t.qty).toLocaleString()+'</td>'
+        + '<td style="font-size:10px;font-style:italic;color:var(--ink-faint);">'+esc(t.notes||'—')+'</td>'
+        + '</tr>';
+    });
+    html += '</tbody></table></div>';
+    body.innerHTML = html;
+  } catch(e){
+    body.innerHTML = '<div style="color:#cc6060;font-size:11px;">Error: '+esc(e.message)+'</div>';
+  }
+}
+function closeMemberHistory(){
+  document.getElementById('member-history-modal').style.display = 'none';
+}
+
+function showNotificationBanner(msg){
+  var el = document.createElement('div');
+  el.style.cssText = 'position:fixed;top:70px;right:20px;z-index:9999;background:rgba(20,14,4,.97);border:1px solid var(--gold-dim);border-radius:4px;padding:14px 18px;font-family:Cinzel,serif;font-size:12px;color:var(--gold-bright);letter-spacing:1px;max-width:320px;box-shadow:0 4px 20px rgba(0,0,0,.7);cursor:pointer;';
+  el.textContent = msg;
+  el.onclick = function(){ el.remove(); };
+  document.body.appendChild(el);
+  setTimeout(function(){ if(el.parentNode) el.remove(); }, 6000);
+}
+
+function toast(msg, isErr=false){
+  const el=document.createElement('div');
+  el.className='toast'+(isErr?' err':'');
+  el.textContent=msg;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(),3000);
+}
+function openGitHub(){
+  window.open(GITHUB_RELEASES, '_blank');
+}
+</script>
+
+<!-- ─── ITEM DETAIL MODAL ─── -->
+<div id="item-detail-modal" style="display:none;position:fixed;inset:0;z-index:9200;background:rgba(0,0,0,.82);align-items:center;justify-content:center;padding:16px;">
+  <div style="background:var(--ink);border:1px solid var(--border-bright);border-radius:6px;width:760px;max-width:98vw;max-height:92vh;overflow-y:auto;padding:0;">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--border-bright);background:#0d0a05;position:sticky;top:0;z-index:2;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span style="font-size:20px;">⚖</span>
+        <div>
+          <div id="item-detail-name" style="font-family:Cinzel Decorative,serif;font-size:14px;color:var(--gold);"></div>
+          <div style="font-size:9px;color:var(--ink-faint);letter-spacing:2px;margin-top:2px;">MARKET ANALYSIS</div>
+        </div>
+      </div>
+      <button class="btn-del" style="padding:6px 14px;" onclick="document.getElementById('item-detail-modal').style.display='none'">✕ Close</button>
+    </div>
+    <div style="padding:20px;">
+      <!-- Stats row -->
+      <div id="item-detail-stats" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:20px;"></div>
+      <!-- Charts row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;" id="item-detail-charts-row">
+        <div class="card" style="padding:14px;">
+          <div style="font-family:Cinzel,serif;font-size:9px;letter-spacing:2px;color:var(--gold-dim);margin-bottom:10px;">YOUR ORG — PRICE OVER TIME</div>
+          <div style="position:relative;height:160px;"><canvas id="item-org-chart"></canvas></div>
+          <div id="item-org-empty" style="display:none;font-size:10px;color:var(--ink-faint);text-align:center;padding:20px 0;">No trades in your org for this item</div>
+        </div>
+        <div class="card" style="padding:14px;">
+          <div style="font-family:Cinzel,serif;font-size:9px;letter-spacing:2px;color:var(--gold-dim);margin-bottom:10px;">GLOBAL — AVG PRICE vs VOLUME</div>
+          <div style="position:relative;height:160px;"><canvas id="item-global-chart"></canvas></div>
+          <div id="item-global-empty" style="display:none;font-size:10px;color:var(--ink-faint);text-align:center;padding:20px 0;">No global data for this item</div>
+        </div>
+      </div>
+      <!-- Org trade list -->
+      <div class="card" style="padding:14px;">
+        <div style="font-family:Cinzel,serif;font-size:9px;letter-spacing:2px;color:var(--gold-dim);margin-bottom:10px;">YOUR ORG TRADES FOR THIS ITEM</div>
+        <div id="item-detail-trades" style="max-height:200px;overflow-y:auto;"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── EDIT TRADE MODAL ─── -->
+<div id="edit-trade-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.75);align-items:center;justify-content:center;">
+  <div class="card" style="width:420px;max-width:95vw;max-height:90vh;overflow-y:auto;border:1px solid var(--border-bright);">
+    <div class="stitle">✏ Edit Trade</div>
+    <div class="fg">
+      <div class="fgrp"><label>Nation</label><input class="fi" id="edit-nation" placeholder="Nation…"/></div>
+      <div class="fgrp"><label>Item</label><input class="fi" id="edit-item" placeholder="Item…"/></div>
+      <div class="fgrp"><label>Type</label>
+        <select class="fi" id="edit-type">
+          <option value="sell">Sell</option>
+          <option value="buy">Buy</option>
+        </select>
+      </div>
+      <div class="fgrp"><label>Quantity</label><input class="fi" type="number" id="edit-qty" min="1"/></div>
+      <div class="fgrp"><label>Price/unit</label><input class="fi" type="number" id="edit-price" min="0"/></div>
+      <div class="fgrp"><label>Date</label><input class="fi" type="date" id="edit-date"/></div>
+      <div class="fgrp" style="grid-column:1/-1"><label>Notes</label><input class="fi" id="edit-notes" placeholder="Notes…"/></div>
+    </div>
+    <input type="hidden" id="edit-trade-id"/>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn-p" style="flex:1;" onclick="saveEditTrade()">💾 Save Changes</button>
+      <button class="btn-del" style="padding:8px 16px;" onclick="closeEditModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── MEMBER HISTORY MODAL ─── -->
+<div id="member-history-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.75);align-items:center;justify-content:center;">
+  <div class="card" style="width:680px;max-width:95vw;max-height:85vh;overflow-y:auto;border:1px solid var(--border-bright);">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div class="stitle" id="member-history-title" style="margin-bottom:0;border-bottom:none;">Trade History</div>
+      <button class="btn-del" style="padding:6px 12px;" onclick="closeMemberHistory()">✕ Close</button>
+    </div>
+    <div id="member-history-body"><div class="loading">Loading…</div></div>
+  </div>
+</div>
+
+<!-- ─── ORG BIO MODAL ─── -->
+<div id="org-bio-modal" style="display:none;position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.75);align-items:center;justify-content:center;">
+  <div class="card" style="width:440px;max-width:95vw;border:1px solid var(--border-bright);">
+    <div class="stitle">📜 Edit Org Description</div>
+    <div class="fgrp">
+      <label>Description / Bio</label>
+      <textarea class="fi" id="org-bio-input" rows="4" placeholder="Describe your nation or organization…" style="resize:vertical;min-height:80px;font-family:inherit;"></textarea>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px;">
+      <button class="btn-p" style="flex:1;" onclick="saveOrgBio()">💾 Save</button>
+      <button class="btn-del" style="padding:8px 16px;" onclick="document.getElementById('org-bio-modal').style.display='none'">Cancel</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

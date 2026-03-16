@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── HELPERS ───────────────────────────────────────────────────
+    function isLoggedIn() {
+      return request.auth != null;
+    }
+
+    function myData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isModerator() {
+      return isLoggedIn() && myData().role == 'moderator';
+    }
+
+    function isInOrg(orgId) {
+      return isLoggedIn() && myData().orgId == orgId;
+    }
+
+    function isLeader(orgId) {
+      return isInOrg(orgId) && myData().role == 'leader';
+    }
+
+    function canTrade(orgId) {
+      return isInOrg(orgId) && myData().role in ['merchant', 'leader'];
+    }
+
+    // ─── USERS ─────────────────────────────────────────────────────
+    // Users can read their own profile. Moderators can read all.
+    match /users/{userId} {
+      allow read: if isLoggedIn() && (request.auth.uid == userId || isModerator());
+
+      // Create your own profile on first login
+      allow create: if isLoggedIn() && request.auth.uid == userId
+        // Prevent self-assigning moderator unless email matches
+        && (request.resource.data.role != 'moderator'
+            || request.auth.token.email == 'OPHacker303@gmail.com');
+
+      // Update your own profile (cannot self-promote to moderator)
+      // OR moderators can update anyone
+      allow update: if isLoggedIn() && (
+        (request.auth.uid == userId
+          && !(request.resource.data.role == 'moderator'
+               && resource.data.role != 'moderator'))
+        || isModerator()
+      );
+    }
+
+    // ─── ORGANIZATIONS ─────────────────────────────────────────────
+    match /orgs/{orgId} {
+      // Members and moderators can read their org
+      allow get: if isLoggedIn() && (isInOrg(orgId) || isModerator());
+
+      // Allow listing orgs to validate join codes (any logged-in user can query by joinCode)
+      allow list: if isLoggedIn();
+
+      // Any logged-in user (without an org) can create a new org
+      allow create: if isLoggedIn();
+
+      // Leaders and moderators can update org details
+      allow update: if isLoggedIn() && (isLeader(orgId) || isModerator());
+
+      // Only moderators can delete orgs
+      allow delete: if isModerator();
+
+      // ─── TRADES (subcollection) ─────────────────────────────────
+      match /trades/{tradeId} {
+        // Members of the org can read. Moderators can read all.
+        allow read: if isLoggedIn() && (isInOrg(orgId) || isModerator());
+        allow list:  if isLoggedIn() && (isInOrg(orgId) || isModerator());
+
+        // Merchants and above can create trades for their own org
+        allow create: if isLoggedIn()
+          && canTrade(orgId)
+          && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.orgId == orgId;
+
+        // Leaders and moderators can update or delete trades
+        allow update: if isLoggedIn() && (isLeader(orgId) || isModerator());
+        allow delete: if isLoggedIn() && (isLeader(orgId) || isModerator());
+      }
+    }
+
+    // ─── GLOBAL STATS (anonymous aggregates) ────────────────────────
+    // Any logged-in user can read the global item totals.
+    // Any logged-in user can update (increment) stats when saving a trade.
+    // No org info is stored here — only item names and aggregate numbers.
+    match /globalStats/{itemId} {
+      allow read: if isLoggedIn();
+      allow write: if isLoggedIn();
+    }
+  }
+}
